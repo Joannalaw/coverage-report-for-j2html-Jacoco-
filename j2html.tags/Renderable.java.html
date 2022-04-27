@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Renderable.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.tags</a> &gt; <span class="el_source">Renderable.java</span></div><h1>Renderable.java</h1><pre class="source lang-java linenums">package j2html.tags;
+
+import j2html.Config;
+import j2html.rendering.FlatHtml;
+import j2html.rendering.HtmlBuilder;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+public interface Renderable {
+
+    /**
+     * Render the Renderable and it's children using the supplied builder.
+     *
+     * @param builder A builder that can compose HTML elements.
+     * @param model   A model object to provide data for children to render.
+     * @param &lt;T&gt;     The type of the Appendable which HTML is being appended to.
+     * @return The Appendable to which HTML has been appended.
+     * @throws IOException
+     */
+    default &lt;T extends Appendable&gt; T render(HtmlBuilder&lt;T&gt; builder, Object model) throws IOException {
+        // This method should be overridden by any internal classes.
+        // renderModel() is only being called to support backwards
+        // compatibility.
+<span class="fc" id="L25">        renderModel(builder, model);</span>
+<span class="fc" id="L26">        return builder.output();</span>
+    }
+
+    /**
+     * Render the Renderable and it's children using the supplied builder.
+     *
+     * @param builder A builder that can compose HTML elements.
+     * @param &lt;T&gt;     The type of the Appendable to which HTML is being appended.
+     * @return The Appendable to which HTML has been appended.
+     * @throws IOException
+     */
+    default &lt;T extends Appendable&gt; T render(HtmlBuilder&lt;T&gt; builder) throws IOException {
+<span class="fc" id="L38">        return render(builder, null);</span>
+    }
+
+    /**
+     * Create a StringBuilder and use it to render the Renderable and it's
+     * children
+     */
+    default String render() {
+        try {
+<span class="fc" id="L47">            return render(FlatHtml.into(new StringBuilder(), Config.global())).toString();</span>
+<span class="nc" id="L48">        } catch (IOException e) {</span>
+<span class="nc" id="L49">            throw new UncheckedIOException(e);</span>
+        }
+    }
+
+    /**
+     * Render the Renderable and it's children using the supplied writer
+     *
+     * @param writer the current writer
+     */
+    @Deprecated
+    default void render(Appendable writer) throws IOException {
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        if (writer instanceof HtmlBuilder) {</span>
+<span class="nc" id="L61">            render((HtmlBuilder&lt;? extends Appendable&gt;) writer);</span>
+        } else {
+<span class="fc" id="L63">            render(FlatHtml.into(writer, Config.global()));</span>
+        }
+<span class="fc" id="L65">    }</span>
+
+    /**
+     * Render the Renderable and it's children using the supplied writer and a model.
+     *
+     * @param writer the current writer
+     * @param model  a model object to provide data for children to render
+     */
+    @Deprecated
+    default void renderModel(Appendable writer, Object model) throws IOException {
+        // This method is a placeholder to support any client classes
+        // which previously extended Renderable implementers, such as Tags.
+        // No internal classes should implement this method; except to support
+        // compatibility.  Instead they should implement rendering with an HtmlBuilder.
+<span class="nc" id="L79">        throw new RuntimeException(&quot;Renderable.renderModel(Appendable writer, Object model) has been deprecated.  Please use Renderable.render(HtmlBuilder&lt;T&gt; builder, Object model) instead.&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

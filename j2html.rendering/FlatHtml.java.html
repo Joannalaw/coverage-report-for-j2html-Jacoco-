@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FlatHtml.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.rendering</a> &gt; <span class="el_source">FlatHtml.java</span></div><h1>FlatHtml.java</h1><pre class="source lang-java linenums">package j2html.rendering;
+
+import j2html.Config;
+import j2html.utils.TextEscaper;
+
+import java.io.IOException;
+
+/**
+ * Composes HTML without any extra line breaks or indentation.
+ *
+ * @param &lt;T&gt; The type of the Appendable to which HTML will be appended.
+ */
+public class FlatHtml&lt;T extends Appendable&gt; implements HtmlBuilder&lt;T&gt; {
+
+    /**
+     * Returns an HtmlBuilder that will generate flat HTML using
+     * Config defaults.
+     *
+     * @param out The Appendable to which HTML will be appended.
+     * @param &lt;T&gt; The type of the Appendable to which HTML will be appended.
+     * @return An HtmlBuilder for flat HTML.
+     */
+    public static final &lt;T extends Appendable&gt; FlatHtml&lt;T&gt; into(T out) {
+<span class="fc" id="L24">        return new FlatHtml&lt;&gt;(out, Config.defaults());</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate flat HTML using
+     * the given Config.
+     *
+     * @param out    The Appendable to which HTML will be appended.
+     * @param config The Config which will specify text escapement, tag closing, etc.
+     * @param &lt;T&gt;    The type of the Appendable to which HTML will be appended.
+     * @return An HtmlBuilder for flat HTML.
+     */
+    public static final &lt;T extends Appendable&gt; FlatHtml&lt;T&gt; into(T out, Config config) {
+<span class="fc" id="L37">        return new FlatHtml&lt;&gt;(out, config);</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate flat HTML in memory
+     * using Config defaults.
+     *
+     * @return An HtmlBuilder for flat HTML.
+     */
+    public static final FlatHtml&lt;StringBuilder&gt; inMemory() {
+<span class="fc" id="L47">        return into(new StringBuilder());</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate flat HTML in memory
+     * using the given Config.
+     * @param config The Config which will specify text escapement, tag closing, etc.
+     * @return An HtmlBuilder for flat HTML.
+     */
+    public static final FlatHtml&lt;StringBuilder&gt; inMemory(Config config) {
+<span class="fc" id="L57">        return into(new StringBuilder(), config);</span>
+    }
+
+    private final T out;
+    private final TextEscaper textEscaper;
+    private final TagBuilder enclosingElementAttributes;
+    private final TagBuilder emptyElementAttributes;
+
+<span class="fc" id="L65">    private FlatHtml(T out, Config config) {</span>
+<span class="fc" id="L66">        this.out = out;</span>
+<span class="fc" id="L67">        this.textEscaper = config.textEscaper();</span>
+<span class="fc" id="L68">        this.enclosingElementAttributes = new FlatTagBuilder(false);</span>
+<span class="fc" id="L69">        this.emptyElementAttributes = new FlatTagBuilder(config.closeEmptyTags());</span>
+<span class="fc" id="L70">    }</span>
+
+    public T output() {
+<span class="fc" id="L73">        return out;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(CharSequence csq) throws IOException {
+<span class="fc" id="L79">        out.append(csq);</span>
+<span class="fc" id="L80">        return this;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(CharSequence csq, int start, int end) throws IOException {
+<span class="nc" id="L86">        out.append(csq, start, end);</span>
+<span class="nc" id="L87">        return this;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(char c) throws IOException {
+<span class="fc" id="L93">        out.append(c);</span>
+<span class="fc" id="L94">        return this;</span>
+    }
+
+    @Override
+    public TagBuilder appendStartTag(String name) throws IOException {
+<span class="fc" id="L99">        out.append(&quot;&lt;&quot;).append(name);</span>
+<span class="fc" id="L100">        return enclosingElementAttributes;</span>
+    }
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendEndTag(String name) throws IOException {
+<span class="fc" id="L105">        out.append(&quot;&lt;/&quot;).append(name).append(&quot;&gt;&quot;);</span>
+<span class="fc" id="L106">        return this;</span>
+    }
+
+    @Override
+    public TagBuilder appendEmptyTag(String name) throws IOException {
+<span class="fc" id="L111">        out.append(&quot;&lt;&quot;).append(name);</span>
+<span class="fc" id="L112">        return emptyElementAttributes;</span>
+    }
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendEscapedText(String txt) throws IOException {
+<span class="fc" id="L117">        out.append(textEscaper.escape(txt));</span>
+<span class="fc" id="L118">        return this;</span>
+    }
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendUnescapedText(String txt) throws IOException {
+<span class="fc" id="L123">        out.append(txt);</span>
+<span class="fc" id="L124">        return this;</span>
+    }
+
+    private class FlatTagBuilder implements TagBuilder {
+
+        private final boolean closeTag;
+
+<span class="fc" id="L131">        private FlatTagBuilder(boolean closeTag) {</span>
+<span class="fc" id="L132">            this.closeTag = closeTag;</span>
+<span class="fc" id="L133">        }</span>
+
+        @Override
+        public TagBuilder appendAttribute(String name, String value) throws IOException {
+<span class="fc" id="L137">            out.append(&quot; &quot;)</span>
+<span class="fc" id="L138">                .append(name)</span>
+<span class="fc" id="L139">                .append(&quot;=\&quot;&quot;)</span>
+<span class="fc" id="L140">                .append(textEscaper.escape(value))</span>
+<span class="fc" id="L141">                .append(&quot;\&quot;&quot;);</span>
+<span class="fc" id="L142">            return this;</span>
+        }
+
+        @Override
+        public TagBuilder appendBooleanAttribute(String name) throws IOException {
+<span class="fc" id="L147">            out.append(&quot; &quot;).append(name);</span>
+<span class="fc" id="L148">            return this;</span>
+        }
+
+        @Override
+        public HtmlBuilder&lt;T&gt; completeTag() throws IOException {
+<span class="fc bfc" id="L153" title="All 2 branches covered.">            if (closeTag) {</span>
+<span class="fc" id="L154">                out.append(&quot;/&quot;);</span>
+            }
+<span class="fc" id="L156">            out.append(&quot;&gt;&quot;);</span>
+
+<span class="fc" id="L158">            return FlatHtml.this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(CharSequence csq) throws IOException {
+<span class="fc" id="L164">            out.append(csq);</span>
+<span class="fc" id="L165">            return this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(CharSequence csq, int start, int end) throws IOException {
+<span class="nc" id="L171">            out.append(csq, start, end);</span>
+<span class="nc" id="L172">            return this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(char c) throws IOException {
+<span class="nc" id="L178">            out.append(c);</span>
+<span class="nc" id="L179">            return this;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,997 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TagCreator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html</a> &gt; <span class="el_source">TagCreator.java</span></div><h1>TagCreator.java</h1><pre class="source lang-java linenums">package j2html;
+
+import j2html.attributes.Attr;
+import j2html.tags.ContainerTag;
+import j2html.tags.DomContent;
+import j2html.tags.DomContentJoiner;
+import j2html.tags.EmptyTag;
+import j2html.tags.InlineStaticResource;
+import j2html.tags.Tag;
+import j2html.tags.Text;
+import j2html.tags.UnescapedText;
+import j2html.tags.specialized.*;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class TagCreator {
+
+    private TagCreator() {
+    }
+
+    /**
+     * Generic if-expression to do if'ing inside method calls
+     *
+     * @param &lt;T&gt;       The derived generic parameter type
+     * @param condition the condition to if-on
+     * @param ifValue   the value to return if condition is true
+     * @return value if condition is true, null otherwise
+     */
+    public static &lt;T&gt; T iff(boolean condition, T ifValue) {
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        return condition ? ifValue : null;</span>
+    }
+
+    /**
+     * Generic if-expression to if'ing inside method calls
+     *
+     * @param optional   The item that may be present
+     * @param ifFunction The function that will be called if that optional is present
+     * @param &lt;T&gt;        The derived generic parameter type
+     * @param &lt;U&gt;        The supplying generic parameter type
+     * @return transformed value if condition is true, null otherwise
+     */
+    @SuppressWarnings(&quot;OptionalUsedAsFieldOrParameterType&quot;)
+    public static &lt;T, U&gt; T iff(Optional&lt;U&gt; optional, Function&lt;U, T&gt; ifFunction) {
+<span class="pc bpc" id="L50" title="1 of 4 branches missed.">        if (Objects.nonNull(optional) &amp;&amp; optional.isPresent()) {</span>
+<span class="fc" id="L51">            return optional.map(ifFunction).orElse(null);</span>
+        }
+<span class="fc" id="L53">        return null;</span>
+    }
+
+    /**
+     * Like {@link j2html.TagCreator#iff}, but returns else-value instead of null
+     */
+    public static &lt;T&gt; T iffElse(boolean condition, T ifValue, T elseValue) {
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">        return condition ? ifValue : elseValue;</span>
+    }
+
+    /**
+     * Returns a Attr.ShortForm object with either id, classes or both,
+     * obtained from parsing the input string using css selector syntax
+     *
+     * @param attrs the string with shortform attributes, only id and class is supported
+     * @return a Attr.ShortForm object
+     */
+    public static Attr.ShortForm attrs(String attrs) {
+<span class="fc" id="L71">        return Attr.shortFormFromAttrsString(attrs);</span>
+    }
+
+    /**
+     * Returns the HTML created by concatenating the input elements,
+     * separated by space, in encounter order.
+     * Also removes spaces before periods and commas.
+     *
+     * @param stringOrDomObjects the elements to join
+     * @return joined elements as HTML
+     */
+    public static UnescapedText join(Object... stringOrDomObjects) {
+<span class="fc" id="L83">        return DomContentJoiner.join(&quot; &quot;, true, stringOrDomObjects);</span>
+    }
+
+    /**
+     * Creates a group of DomContent objects (that may be used with {@link #iff(boolean, Object)} or returned from a
+     * method call).
+     *
+     * @param contents the DomContent elements
+     * @return DomContent containing the given elements
+     */
+    public static DomContent each(DomContent... contents) {
+<span class="nc" id="L94">        return new ContainerTag&lt;&gt;(null).with(contents);</span>
+    }
+
+    /**
+     * Creates a DomContent object containing HTML elements from a stream.
+     * Intended usage: {@literal each(numbers.stream().map(n -&gt; li(n.toString())))}
+     *
+     * @param stream the stream of DomContent elements
+     * @return DomContent containing elements from the stream
+     */
+    public static DomContent each(Stream&lt;DomContent&gt; stream) {
+<span class="fc" id="L105">        return new ContainerTag&lt;&gt;(null).with(stream);</span>
+    }
+
+    /**
+     * Creates a DomContent object containing HTML using a mapping function on a collection
+     * Intended usage: {@literal each(numbers, n -&gt; li(n.toString()))}
+     *
+     * @param &lt;T&gt;        The derived generic parameter type
+     * @param collection the collection to iterate over, ex: a list of values &quot;1, 2, 3&quot;
+     * @param mapper     the mapping function, ex: {@literal &quot;n -&gt; li(n.toString())&quot;}
+     * @return DomContent containing mapped data {@literal (ex. docs: [li(1), li(2), li(3)])}
+     */
+    public static &lt;T&gt; DomContent each(Collection&lt;T&gt; collection, Function&lt;? super T, DomContent&gt; mapper) {
+<span class="fc" id="L118">        return tag(null).with(collection.stream().map(mapper));</span>
+    }
+
+    /**
+     * Creates a DomContent object containing HTML using a mapping BiFunction on a collection
+     * Intended usage: {@literal each(names, (index, name) -&gt; li(index + &quot; &quot; + name))}
+     *
+     * @param &lt;T&gt;        The derived generic parameter type
+     * @param collection the collection to iterate over, ex: a list of values [ &quot;Tom&quot;, &quot;Dick&quot;, &quot;Harry&quot; ]
+     * @param mapper     the mapping BiFunction, ex: {@literal &quot;(index, name) -&gt; li(index + &quot; &quot; + name)&quot;}
+     * @return DomContent containing mapped data {@literal (ex. docs: [li(0 Tom), li(1 Dick), li(2 Harry)])}
+     */
+    public static &lt;T&gt; DomContent each(Collection&lt;T&gt; collection, BiFunction&lt;Integer, ? super T, DomContent&gt; mapper) {
+<span class="fc" id="L131">        ContainerTag&lt;?&gt; dom = tag(null);</span>
+<span class="fc" id="L132">        int i = 0;</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        for(T t : collection){</span>
+<span class="fc" id="L134">            dom.with(mapper.apply(i++, t));</span>
+<span class="fc" id="L135">        }</span>
+<span class="fc" id="L136">        return dom;</span>
+    }
+
+    public static &lt;I, T&gt; DomContent each(final Map&lt;I, T&gt; map, final Function&lt;Entry&lt;I, T&gt;, DomContent&gt; mapper) {
+<span class="fc" id="L140">        return each(map.entrySet().stream().map(mapper));</span>
+    }
+
+    /**
+     * Creates a DomContent object containing HTML using a mapping function on a map
+     * Intended usage: {@literal each(idsToNames, (id, name) -&gt; li(id + &quot; &quot; + name))}
+     *
+     * @param &lt;I&gt;    The type of the keys
+     * @param &lt;T&gt;    The type of the values
+     * @param map    the map to iterate over, ex: a map of values { 1: &quot;Tom&quot;, 2: &quot;Dick&quot;, 3: &quot;Harry&quot; }
+     * @param mapper the mapping function, ex: {@literal &quot;(id, name) -&gt; li(id + &quot; &quot; + name)&quot;}
+     * @return DomContent containing mapped data {@literal (ex. docs: [li(1 Tom), li(2 Dick), li(3 Harry)])}
+     */
+    public static &lt;I, T&gt; DomContent each(final Map&lt;I, T&gt; map, final BiFunction&lt;I, T, DomContent&gt; mapper) {
+<span class="fc" id="L154">        return each(map.entrySet().stream().map(entry -&gt; mapper.apply(entry.getKey(), entry.getValue())));</span>
+    }
+
+    /**
+     * Filters a collection to a list, to be used with {@link j2html.TagCreator#each}
+     * Intended usage: {@literal each(filter(numbers, n -&gt; n % 2 == 0), n -&gt; li(n.toString()))}
+     *
+     * @param &lt;T&gt;        The derived generic parameter type
+     * @param collection the collection to filter, ex: a list of values &quot;1, 2, 3&quot;
+     * @param filter     the filter predicate, {@literal ex: &quot;n -&gt; n % 2 == 0&quot;}
+     * @return the filtered collection as a list (ex. docs: 2)
+     */
+    public static &lt;T&gt; List&lt;T&gt; filter(Collection&lt;T&gt; collection, Predicate&lt;? super T&gt; filter) {
+<span class="fc" id="L167">        return collection.stream().filter(filter).collect(Collectors.toList());</span>
+    }
+
+    /**
+     * Wraps a String in an UnescapedText element
+     *
+     * @param html the input html
+     * @return the input html wrapped in an UnescapedText element
+     */
+    public static UnescapedText rawHtml(String html) {
+<span class="fc" id="L177">        return new UnescapedText(html);</span>
+    }
+
+    /**
+     * Wraps a String in a Text element (does html-escaping)
+     *
+     * @param text the input string
+     * @return the input string, html-escaped
+     */
+    public static Text text(String text) {
+<span class="fc" id="L187">        return new Text(text);</span>
+    }
+
+    /**
+     * Return a complete html document string
+     *
+     * @param htmlTag the html content of a website
+     * @return document declaration and rendered html content
+     */
+    public static String document(HtmlTag htmlTag) {
+<span class="fc" id="L197">        return document().render() + htmlTag.render();</span>
+    }
+
+    //Special tags
+    public static ContainerTag&lt;? extends Tag&lt;?&gt;&gt; tag(String tagName) {
+<span class="fc" id="L202">        return new ContainerTag&lt;&gt;(tagName);</span>
+    }
+
+    public static EmptyTag&lt;? extends Tag&lt;?&gt;&gt; emptyTag(String tagName) {
+<span class="fc" id="L206">        return new EmptyTag&lt;&gt;(tagName);</span>
+    }
+
+    public static Text fileAsEscapedString(String path) {
+<span class="fc" id="L210">        return text(InlineStaticResource.getFileAsString(path));</span>
+    }
+
+    public static UnescapedText fileAsString(String path) {
+<span class="fc" id="L214">        return rawHtml(InlineStaticResource.getFileAsString(path));</span>
+    }
+
+    public static StyleTag styleWithInlineFile(String path) {
+<span class="nc" id="L218">        return (StyleTag) InlineStaticResource.get(path, InlineStaticResource.TargetFormat.CSS);</span>
+    }
+
+    public static ScriptTag scriptWithInlineFile(String path) {
+<span class="nc" id="L222">        return (ScriptTag) InlineStaticResource.get(path, InlineStaticResource.TargetFormat.JS);</span>
+    }
+
+    public static StyleTag styleWithInlineFile_min(String path) {
+<span class="fc" id="L226">        return (StyleTag) InlineStaticResource.get(path, InlineStaticResource.TargetFormat.CSS_MIN);</span>
+    }
+
+    public static ScriptTag scriptWithInlineFile_min(String path) {
+<span class="fc" id="L230">        return (ScriptTag) InlineStaticResource.get(path, InlineStaticResource.TargetFormat.JS_MIN);</span>
+    }
+
+    public static DomContent document() {
+<span class="fc" id="L234">        return rawHtml(&quot;&lt;!DOCTYPE html&gt;&quot;);</span>
+    }
+
+    public static HtmlTag html() {
+<span class="fc" id="L238">        return new HtmlTag();</span>
+    }
+
+<span class="nc" id="L241">    public static HtmlTag html(String text) { return html().withText(text); }</span>
+
+<span class="fc" id="L243">    public static HtmlTag html(DomContent... dc) { return html().with(dc); }</span>
+
+    public static HtmlTag html(Attr.ShortForm shortAttr) {
+<span class="nc" id="L246">        return Attr.addTo(html(), shortAttr);</span>
+    }
+
+    public static HtmlTag html(Attr.ShortForm shortAttr, String text) {
+<span class="nc" id="L250">        return Attr.addTo(html(text), shortAttr);</span>
+    }
+
+    public static HtmlTag html(Attr.ShortForm shortAttr, DomContent... dc) {
+<span class="nc" id="L254">        return Attr.addTo(html(dc), shortAttr);</span>
+    }
+
+    public static BodyTag body() {
+<span class="fc" id="L258">        return new BodyTag();</span>
+    }
+
+    public static BodyTag body(String text) {
+<span class="nc" id="L262">        return new BodyTag().withText(text);</span>
+    }
+
+    public static BodyTag body(DomContent... dc) {
+<span class="fc" id="L266">        return new BodyTag().with(dc);</span>
+    }
+
+    public static BodyTag body(Attr.ShortForm shortAttr) {
+<span class="nc" id="L270">        return Attr.addTo(new BodyTag(), shortAttr);</span>
+    }
+
+    public static BodyTag body(Attr.ShortForm shortAttr, String text) {
+<span class="nc" id="L274">        return Attr.addTo(new BodyTag().withText(text), shortAttr);</span>
+    }
+
+    public static BodyTag body(Attr.ShortForm shortAttr, DomContent... dc) {
+<span class="nc" id="L278">        return Attr.addTo(new BodyTag().with(dc), shortAttr);</span>
+    }
+
+    public static HeadTag head() {
+<span class="fc" id="L282">        return new HeadTag();</span>
+    }
+
+    public static HeadTag head(String text) {
+<span class="nc" id="L286">        return new HeadTag().withText(text);</span>
+    }
+
+    public static HeadTag head(DomContent... dc) {
+<span class="fc" id="L290">        return new HeadTag().with(dc);</span>
+    }
+
+    public static HeadTag head(Attr.ShortForm shortAttr) {
+<span class="nc" id="L294">        return Attr.addTo(new HeadTag(), shortAttr);</span>
+    }
+
+    public static HeadTag head(Attr.ShortForm shortAttr, String text) {
+<span class="nc" id="L298">        return Attr.addTo(new HeadTag().withText(text), shortAttr);</span>
+    }
+
+    public static HeadTag head(Attr.ShortForm shortAttr, DomContent... dc) {
+<span class="nc" id="L302">        return Attr.addTo(new HeadTag().with(dc), shortAttr);</span>
+    }
+
+    // EmptyTags, generated in class j2html.tags.generators.TagCreatorCodeGenerator
+<span class="fc" id="L306">    public static AreaTag area ()                                                   { return  new AreaTag(); }</span>
+<span class="nc" id="L307">    public static AreaTag area (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new AreaTag(), shortAttr); }</span>
+
+<span class="fc" id="L309">    public static BaseTag base ()                                                   { return  new BaseTag(); }</span>
+<span class="nc" id="L310">    public static BaseTag base (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new BaseTag(), shortAttr); }</span>
+
+<span class="fc" id="L312">    public static BrTag br ()                                                       { return  new BrTag(); }</span>
+<span class="nc" id="L313">    public static BrTag br (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new BrTag(), shortAttr); }</span>
+
+<span class="fc" id="L315">    public static ColTag col ()                                                     { return  new ColTag(); }</span>
+<span class="nc" id="L316">    public static ColTag col (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new ColTag(), shortAttr); }</span>
+
+<span class="fc" id="L318">    public static EmbedTag embed ()                                                 { return  new EmbedTag(); }</span>
+<span class="nc" id="L319">    public static EmbedTag embed (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new EmbedTag(), shortAttr); }</span>
+
+<span class="fc" id="L321">    public static HrTag hr ()                                                       { return  new HrTag(); }</span>
+<span class="nc" id="L322">    public static HrTag hr (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new HrTag(), shortAttr); }</span>
+
+<span class="fc" id="L324">    public static ImgTag img ()                                                     { return  new ImgTag(); }</span>
+<span class="nc" id="L325">    public static ImgTag img (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new ImgTag(), shortAttr); }</span>
+
+<span class="fc" id="L327">    public static InputTag input ()                                                 { return  new InputTag(); }</span>
+<span class="fc" id="L328">    public static InputTag input (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new InputTag(), shortAttr); }</span>
+
+<span class="fc" id="L330">    public static KeygenTag keygen ()                                               { return  new KeygenTag(); }</span>
+<span class="nc" id="L331">    public static KeygenTag keygen (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new KeygenTag(), shortAttr); }</span>
+
+<span class="fc" id="L333">    public static LinkTag link ()                                                   { return  new LinkTag(); }</span>
+<span class="nc" id="L334">    public static LinkTag link (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new LinkTag(), shortAttr); }</span>
+
+<span class="fc" id="L336">    public static MetaTag meta ()                                                   { return  new MetaTag(); }</span>
+<span class="nc" id="L337">    public static MetaTag meta (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new MetaTag(), shortAttr); }</span>
+
+<span class="fc" id="L339">    public static ParamTag param ()                                                 { return  new ParamTag(); }</span>
+<span class="nc" id="L340">    public static ParamTag param (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new ParamTag(), shortAttr); }</span>
+
+<span class="fc" id="L342">    public static SourceTag source ()                                               { return  new SourceTag(); }</span>
+<span class="nc" id="L343">    public static SourceTag source (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new SourceTag(), shortAttr); }</span>
+
+<span class="fc" id="L345">    public static TrackTag track ()                                                 { return  new TrackTag(); }</span>
+<span class="nc" id="L346">    public static TrackTag track (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TrackTag(), shortAttr); }</span>
+
+<span class="fc" id="L348">    public static WbrTag wbr ()                                                     { return  new WbrTag(); }</span>
+<span class="nc" id="L349">    public static WbrTag wbr (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new WbrTag(), shortAttr); }</span>
+
+    // ContainerTags, generated in class j2html.tags.generators.TagCreatorCodeGenerator
+<span class="fc" id="L352">    public static ATag a ()                                                         {  return new ATag(); }</span>
+<span class="fc" id="L353">    public static ATag a (String text)                                              {  return new ATag().withText(text); }</span>
+<span class="nc" id="L354">    public static ATag a (DomContent... dc)                                         {  return new ATag().with(dc); }</span>
+<span class="nc" id="L355">    public static ATag a (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new ATag(), shortAttr); }</span>
+<span class="nc" id="L356">    public static ATag a (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new ATag().withText(text), shortAttr); }</span>
+<span class="nc" id="L357">    public static ATag a (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new ATag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L359">    public static AbbrTag abbr ()                                                   {  return new AbbrTag(); }</span>
+<span class="nc" id="L360">    public static AbbrTag abbr (String text)                                        {  return new AbbrTag().withText(text); }</span>
+<span class="nc" id="L361">    public static AbbrTag abbr (DomContent... dc)                                   {  return new AbbrTag().with(dc); }</span>
+<span class="nc" id="L362">    public static AbbrTag abbr (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new AbbrTag(), shortAttr); }</span>
+<span class="nc" id="L363">    public static AbbrTag abbr (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new AbbrTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L364">    public static AbbrTag abbr (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new AbbrTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L366">    public static AddressTag address ()                                             {  return new AddressTag(); }</span>
+<span class="nc" id="L367">    public static AddressTag address (String text)                                  {  return new AddressTag().withText(text); }</span>
+<span class="nc" id="L368">    public static AddressTag address (DomContent... dc)                             {  return new AddressTag().with(dc); }</span>
+<span class="nc" id="L369">    public static AddressTag address (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new AddressTag(), shortAttr); }</span>
+<span class="nc" id="L370">    public static AddressTag address (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new AddressTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L371">    public static AddressTag address (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new AddressTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L373">    public static ArticleTag article ()                                             {  return new ArticleTag(); }</span>
+<span class="nc" id="L374">    public static ArticleTag article (String text)                                  {  return new ArticleTag().withText(text); }</span>
+<span class="nc" id="L375">    public static ArticleTag article (DomContent... dc)                             {  return new ArticleTag().with(dc); }</span>
+<span class="nc" id="L376">    public static ArticleTag article (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new ArticleTag(), shortAttr); }</span>
+<span class="nc" id="L377">    public static ArticleTag article (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new ArticleTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L378">    public static ArticleTag article (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new ArticleTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L380">    public static AsideTag aside ()                                                 {  return new AsideTag(); }</span>
+<span class="nc" id="L381">    public static AsideTag aside (String text)                                      {  return new AsideTag().withText(text); }</span>
+<span class="nc" id="L382">    public static AsideTag aside (DomContent... dc)                                 {  return new AsideTag().with(dc); }</span>
+<span class="nc" id="L383">    public static AsideTag aside (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new AsideTag(), shortAttr); }</span>
+<span class="nc" id="L384">    public static AsideTag aside (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new AsideTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L385">    public static AsideTag aside (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new AsideTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L387">    public static AudioTag audio ()                                                 {  return new AudioTag(); }</span>
+<span class="nc" id="L388">    public static AudioTag audio (String text)                                      {  return new AudioTag().withText(text); }</span>
+<span class="nc" id="L389">    public static AudioTag audio (DomContent... dc)                                 {  return new AudioTag().with(dc); }</span>
+<span class="nc" id="L390">    public static AudioTag audio (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new AudioTag(), shortAttr); }</span>
+<span class="nc" id="L391">    public static AudioTag audio (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new AudioTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L392">    public static AudioTag audio (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new AudioTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L394">    public static BTag b ()                                                         {  return new BTag(); }</span>
+<span class="fc" id="L395">    public static BTag b (String text)                                              {  return new BTag().withText(text); }</span>
+<span class="nc" id="L396">    public static BTag b (DomContent... dc)                                         {  return new BTag().with(dc); }</span>
+<span class="nc" id="L397">    public static BTag b (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new BTag(), shortAttr); }</span>
+<span class="nc" id="L398">    public static BTag b (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new BTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L399">    public static BTag b (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new BTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L401">    public static BdiTag bdi ()                                                     {  return new BdiTag(); }</span>
+<span class="fc" id="L402">    public static BdiTag bdi (String text)                                          {  return new BdiTag().withText(text); }</span>
+<span class="nc" id="L403">    public static BdiTag bdi (DomContent... dc)                                     {  return new BdiTag().with(dc); }</span>
+<span class="nc" id="L404">    public static BdiTag bdi (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new BdiTag(), shortAttr); }</span>
+<span class="nc" id="L405">    public static BdiTag bdi (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new BdiTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L406">    public static BdiTag bdi (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new BdiTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L408">    public static BdoTag bdo ()                                                     {  return new BdoTag(); }</span>
+<span class="fc" id="L409">    public static BdoTag bdo (String text)                                          {  return new BdoTag().withText(text); }</span>
+<span class="nc" id="L410">    public static BdoTag bdo (DomContent... dc)                                     {  return new BdoTag().with(dc); }</span>
+<span class="nc" id="L411">    public static BdoTag bdo (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new BdoTag(), shortAttr); }</span>
+<span class="nc" id="L412">    public static BdoTag bdo (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new BdoTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L413">    public static BdoTag bdo (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new BdoTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L415">    public static BlockquoteTag blockquote ()                                       {  return new BlockquoteTag(); }</span>
+<span class="fc" id="L416">    public static BlockquoteTag blockquote (String text)                            {  return new BlockquoteTag().withText(text); }</span>
+<span class="nc" id="L417">    public static BlockquoteTag blockquote (DomContent... dc)                       {  return new BlockquoteTag().with(dc); }</span>
+<span class="nc" id="L418">    public static BlockquoteTag blockquote (Attr.ShortForm shortAttr)               {  return Attr.addTo( new BlockquoteTag(), shortAttr); }</span>
+<span class="nc" id="L419">    public static BlockquoteTag blockquote (Attr.ShortForm shortAttr, String text)  {  return Attr.addTo( new BlockquoteTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L420">    public static BlockquoteTag blockquote (Attr.ShortForm shortAttr, DomContent... dc){  return Attr.addTo( new BlockquoteTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L422">    public static ButtonTag button ()                                               {  return new ButtonTag(); }</span>
+<span class="fc" id="L423">    public static ButtonTag button (String text)                                    {  return new ButtonTag().withText(text); }</span>
+<span class="nc" id="L424">    public static ButtonTag button (DomContent... dc)                               {  return new ButtonTag().with(dc); }</span>
+<span class="nc" id="L425">    public static ButtonTag button (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new ButtonTag(), shortAttr); }</span>
+<span class="nc" id="L426">    public static ButtonTag button (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new ButtonTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L427">    public static ButtonTag button (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new ButtonTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L429">    public static CanvasTag canvas ()                                               {  return new CanvasTag(); }</span>
+<span class="nc" id="L430">    public static CanvasTag canvas (String text)                                    {  return new CanvasTag().withText(text); }</span>
+<span class="nc" id="L431">    public static CanvasTag canvas (DomContent... dc)                               {  return new CanvasTag().with(dc); }</span>
+<span class="nc" id="L432">    public static CanvasTag canvas (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new CanvasTag(), shortAttr); }</span>
+<span class="nc" id="L433">    public static CanvasTag canvas (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new CanvasTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L434">    public static CanvasTag canvas (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new CanvasTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L436">    public static CaptionTag caption ()                                             {  return new CaptionTag(); }</span>
+<span class="fc" id="L437">    public static CaptionTag caption (String text)                                  {  return new CaptionTag().withText(text); }</span>
+<span class="nc" id="L438">    public static CaptionTag caption (DomContent... dc)                             {  return new CaptionTag().with(dc); }</span>
+<span class="nc" id="L439">    public static CaptionTag caption (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new CaptionTag(), shortAttr); }</span>
+<span class="nc" id="L440">    public static CaptionTag caption (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new CaptionTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L441">    public static CaptionTag caption (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new CaptionTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L443">    public static CiteTag cite ()                                                   {  return new CiteTag(); }</span>
+<span class="fc" id="L444">    public static CiteTag cite (String text)                                        {  return new CiteTag().withText(text); }</span>
+<span class="nc" id="L445">    public static CiteTag cite (DomContent... dc)                                   {  return new CiteTag().with(dc); }</span>
+<span class="nc" id="L446">    public static CiteTag cite (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new CiteTag(), shortAttr); }</span>
+<span class="nc" id="L447">    public static CiteTag cite (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new CiteTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L448">    public static CiteTag cite (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new CiteTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L450">    public static CodeTag code ()                                                   {  return new CodeTag(); }</span>
+<span class="fc" id="L451">    public static CodeTag code (String text)                                        {  return new CodeTag().withText(text); }</span>
+<span class="nc" id="L452">    public static CodeTag code (DomContent... dc)                                   {  return new CodeTag().with(dc); }</span>
+<span class="nc" id="L453">    public static CodeTag code (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new CodeTag(), shortAttr); }</span>
+<span class="nc" id="L454">    public static CodeTag code (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new CodeTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L455">    public static CodeTag code (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new CodeTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L457">    public static ColgroupTag colgroup ()                                           {  return new ColgroupTag(); }</span>
+<span class="nc" id="L458">    public static ColgroupTag colgroup (String text)                                {  return new ColgroupTag().withText(text); }</span>
+<span class="nc" id="L459">    public static ColgroupTag colgroup (DomContent... dc)                           {  return new ColgroupTag().with(dc); }</span>
+<span class="nc" id="L460">    public static ColgroupTag colgroup (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new ColgroupTag(), shortAttr); }</span>
+<span class="nc" id="L461">    public static ColgroupTag colgroup (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new ColgroupTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L462">    public static ColgroupTag colgroup (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new ColgroupTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L464">    public static DatalistTag datalist ()                                           {  return new DatalistTag(); }</span>
+<span class="nc" id="L465">    public static DatalistTag datalist (String text)                                {  return new DatalistTag().withText(text); }</span>
+<span class="nc" id="L466">    public static DatalistTag datalist (DomContent... dc)                           {  return new DatalistTag().with(dc); }</span>
+<span class="nc" id="L467">    public static DatalistTag datalist (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new DatalistTag(), shortAttr); }</span>
+<span class="nc" id="L468">    public static DatalistTag datalist (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new DatalistTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L469">    public static DatalistTag datalist (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new DatalistTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L471">    public static DdTag dd ()                                                       {  return new DdTag(); }</span>
+<span class="fc" id="L472">    public static DdTag dd (String text)                                            {  return new DdTag().withText(text); }</span>
+<span class="nc" id="L473">    public static DdTag dd (DomContent... dc)                                       {  return new DdTag().with(dc); }</span>
+<span class="nc" id="L474">    public static DdTag dd (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new DdTag(), shortAttr); }</span>
+<span class="nc" id="L475">    public static DdTag dd (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new DdTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L476">    public static DdTag dd (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new DdTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L478">    public static DelTag del ()                                                     {  return new DelTag(); }</span>
+<span class="fc" id="L479">    public static DelTag del (String text)                                          {  return new DelTag().withText(text); }</span>
+<span class="nc" id="L480">    public static DelTag del (DomContent... dc)                                     {  return new DelTag().with(dc); }</span>
+<span class="nc" id="L481">    public static DelTag del (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new DelTag(), shortAttr); }</span>
+<span class="nc" id="L482">    public static DelTag del (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new DelTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L483">    public static DelTag del (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new DelTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L485">    public static DetailsTag details ()                                             {  return new DetailsTag(); }</span>
+<span class="nc" id="L486">    public static DetailsTag details (String text)                                  {  return new DetailsTag().withText(text); }</span>
+<span class="nc" id="L487">    public static DetailsTag details (DomContent... dc)                             {  return new DetailsTag().with(dc); }</span>
+<span class="nc" id="L488">    public static DetailsTag details (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new DetailsTag(), shortAttr); }</span>
+<span class="nc" id="L489">    public static DetailsTag details (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new DetailsTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L490">    public static DetailsTag details (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new DetailsTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L492">    public static DfnTag dfn ()                                                     {  return new DfnTag(); }</span>
+<span class="fc" id="L493">    public static DfnTag dfn (String text)                                          {  return new DfnTag().withText(text); }</span>
+<span class="nc" id="L494">    public static DfnTag dfn (DomContent... dc)                                     {  return new DfnTag().with(dc); }</span>
+<span class="nc" id="L495">    public static DfnTag dfn (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new DfnTag(), shortAttr); }</span>
+<span class="nc" id="L496">    public static DfnTag dfn (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new DfnTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L497">    public static DfnTag dfn (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new DfnTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L499">    public static DialogTag dialog ()                                               {  return new DialogTag(); }</span>
+<span class="fc" id="L500">    public static DialogTag dialog (String text)                                    {  return new DialogTag().withText(text); }</span>
+<span class="nc" id="L501">    public static DialogTag dialog (DomContent... dc)                               {  return new DialogTag().with(dc); }</span>
+<span class="nc" id="L502">    public static DialogTag dialog (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new DialogTag(), shortAttr); }</span>
+<span class="nc" id="L503">    public static DialogTag dialog (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new DialogTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L504">    public static DialogTag dialog (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new DialogTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L506">    public static DivTag div ()                                                     {  return new DivTag(); }</span>
+<span class="fc" id="L507">    public static DivTag div (String text)                                          {  return new DivTag().withText(text); }</span>
+<span class="fc" id="L508">    public static DivTag div (DomContent... dc)                                     {  return new DivTag().with(dc); }</span>
+<span class="fc" id="L509">    public static DivTag div (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new DivTag(), shortAttr); }</span>
+<span class="nc" id="L510">    public static DivTag div (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new DivTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L511">    public static DivTag div (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new DivTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L513">    public static DlTag dl ()                                                       {  return new DlTag(); }</span>
+<span class="nc" id="L514">    public static DlTag dl (String text)                                            {  return new DlTag().withText(text); }</span>
+<span class="nc" id="L515">    public static DlTag dl (DomContent... dc)                                       {  return new DlTag().with(dc); }</span>
+<span class="nc" id="L516">    public static DlTag dl (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new DlTag(), shortAttr); }</span>
+<span class="nc" id="L517">    public static DlTag dl (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new DlTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L518">    public static DlTag dl (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new DlTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L520">    public static DtTag dt ()                                                       {  return new DtTag(); }</span>
+<span class="fc" id="L521">    public static DtTag dt (String text)                                            {  return new DtTag().withText(text); }</span>
+<span class="nc" id="L522">    public static DtTag dt (DomContent... dc)                                       {  return new DtTag().with(dc); }</span>
+<span class="nc" id="L523">    public static DtTag dt (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new DtTag(), shortAttr); }</span>
+<span class="nc" id="L524">    public static DtTag dt (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new DtTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L525">    public static DtTag dt (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new DtTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L527">    public static EmTag em ()                                                       {  return new EmTag(); }</span>
+<span class="fc" id="L528">    public static EmTag em (String text)                                            {  return new EmTag().withText(text); }</span>
+<span class="nc" id="L529">    public static EmTag em (DomContent... dc)                                       {  return new EmTag().with(dc); }</span>
+<span class="nc" id="L530">    public static EmTag em (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new EmTag(), shortAttr); }</span>
+<span class="nc" id="L531">    public static EmTag em (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new EmTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L532">    public static EmTag em (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new EmTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L534">    public static FieldsetTag fieldset ()                                           {  return new FieldsetTag(); }</span>
+<span class="nc" id="L535">    public static FieldsetTag fieldset (String text)                                {  return new FieldsetTag().withText(text); }</span>
+<span class="nc" id="L536">    public static FieldsetTag fieldset (DomContent... dc)                           {  return new FieldsetTag().with(dc); }</span>
+<span class="nc" id="L537">    public static FieldsetTag fieldset (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new FieldsetTag(), shortAttr); }</span>
+<span class="nc" id="L538">    public static FieldsetTag fieldset (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new FieldsetTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L539">    public static FieldsetTag fieldset (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new FieldsetTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L541">    public static FigcaptionTag figcaption ()                                       {  return new FigcaptionTag(); }</span>
+<span class="fc" id="L542">    public static FigcaptionTag figcaption (String text)                            {  return new FigcaptionTag().withText(text); }</span>
+<span class="nc" id="L543">    public static FigcaptionTag figcaption (DomContent... dc)                       {  return new FigcaptionTag().with(dc); }</span>
+<span class="nc" id="L544">    public static FigcaptionTag figcaption (Attr.ShortForm shortAttr)               {  return Attr.addTo( new FigcaptionTag(), shortAttr); }</span>
+<span class="nc" id="L545">    public static FigcaptionTag figcaption (Attr.ShortForm shortAttr, String text)  {  return Attr.addTo( new FigcaptionTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L546">    public static FigcaptionTag figcaption (Attr.ShortForm shortAttr, DomContent... dc){  return Attr.addTo( new FigcaptionTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L548">    public static FigureTag figure ()                                               {  return new FigureTag(); }</span>
+<span class="nc" id="L549">    public static FigureTag figure (String text)                                    {  return new FigureTag().withText(text); }</span>
+<span class="nc" id="L550">    public static FigureTag figure (DomContent... dc)                               {  return new FigureTag().with(dc); }</span>
+<span class="nc" id="L551">    public static FigureTag figure (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new FigureTag(), shortAttr); }</span>
+<span class="nc" id="L552">    public static FigureTag figure (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new FigureTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L553">    public static FigureTag figure (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new FigureTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L555">    public static FooterTag footer ()                                               {  return new FooterTag(); }</span>
+<span class="fc" id="L556">    public static FooterTag footer (String text)                                    {  return new FooterTag().withText(text); }</span>
+<span class="nc" id="L557">    public static FooterTag footer (DomContent... dc)                               {  return new FooterTag().with(dc); }</span>
+<span class="nc" id="L558">    public static FooterTag footer (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new FooterTag(), shortAttr); }</span>
+<span class="nc" id="L559">    public static FooterTag footer (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new FooterTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L560">    public static FooterTag footer (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new FooterTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L562">    public static FormTag form ()                                                   {  return new FormTag(); }</span>
+<span class="nc" id="L563">    public static FormTag form (String text)                                        {  return new FormTag().withText(text); }</span>
+<span class="nc" id="L564">    public static FormTag form (DomContent... dc)                                   {  return new FormTag().with(dc); }</span>
+<span class="nc" id="L565">    public static FormTag form (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new FormTag(), shortAttr); }</span>
+<span class="nc" id="L566">    public static FormTag form (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new FormTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L567">    public static FormTag form (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new FormTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L569">    public static H1Tag h1 ()                                                       {  return new H1Tag(); }</span>
+<span class="fc" id="L570">    public static H1Tag h1 (String text)                                            {  return new H1Tag().withText(text); }</span>
+<span class="fc" id="L571">    public static H1Tag h1 (DomContent... dc)                                       {  return new H1Tag().with(dc); }</span>
+<span class="nc" id="L572">    public static H1Tag h1 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H1Tag(), shortAttr); }</span>
+<span class="nc" id="L573">    public static H1Tag h1 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H1Tag().withText(text), shortAttr); }</span>
+<span class="nc" id="L574">    public static H1Tag h1 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H1Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L576">    public static H2Tag h2 ()                                                       {  return new H2Tag(); }</span>
+<span class="fc" id="L577">    public static H2Tag h2 (String text)                                            {  return new H2Tag().withText(text); }</span>
+<span class="fc" id="L578">    public static H2Tag h2 (DomContent... dc)                                       {  return new H2Tag().with(dc); }</span>
+<span class="nc" id="L579">    public static H2Tag h2 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H2Tag(), shortAttr); }</span>
+<span class="fc" id="L580">    public static H2Tag h2 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H2Tag().withText(text), shortAttr); }</span>
+<span class="fc" id="L581">    public static H2Tag h2 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H2Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L583">    public static H3Tag h3 ()                                                       {  return new H3Tag(); }</span>
+<span class="fc" id="L584">    public static H3Tag h3 (String text)                                            {  return new H3Tag().withText(text); }</span>
+<span class="nc" id="L585">    public static H3Tag h3 (DomContent... dc)                                       {  return new H3Tag().with(dc); }</span>
+<span class="nc" id="L586">    public static H3Tag h3 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H3Tag(), shortAttr); }</span>
+<span class="nc" id="L587">    public static H3Tag h3 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H3Tag().withText(text), shortAttr); }</span>
+<span class="nc" id="L588">    public static H3Tag h3 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H3Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L590">    public static H4Tag h4 ()                                                       {  return new H4Tag(); }</span>
+<span class="fc" id="L591">    public static H4Tag h4 (String text)                                            {  return new H4Tag().withText(text); }</span>
+<span class="nc" id="L592">    public static H4Tag h4 (DomContent... dc)                                       {  return new H4Tag().with(dc); }</span>
+<span class="nc" id="L593">    public static H4Tag h4 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H4Tag(), shortAttr); }</span>
+<span class="nc" id="L594">    public static H4Tag h4 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H4Tag().withText(text), shortAttr); }</span>
+<span class="nc" id="L595">    public static H4Tag h4 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H4Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L597">    public static H5Tag h5 ()                                                       {  return new H5Tag(); }</span>
+<span class="fc" id="L598">    public static H5Tag h5 (String text)                                            {  return new H5Tag().withText(text); }</span>
+<span class="nc" id="L599">    public static H5Tag h5 (DomContent... dc)                                       {  return new H5Tag().with(dc); }</span>
+<span class="nc" id="L600">    public static H5Tag h5 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H5Tag(), shortAttr); }</span>
+<span class="nc" id="L601">    public static H5Tag h5 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H5Tag().withText(text), shortAttr); }</span>
+<span class="nc" id="L602">    public static H5Tag h5 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H5Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L604">    public static H6Tag h6 ()                                                       {  return new H6Tag(); }</span>
+<span class="fc" id="L605">    public static H6Tag h6 (String text)                                            {  return new H6Tag().withText(text); }</span>
+<span class="nc" id="L606">    public static H6Tag h6 (DomContent... dc)                                       {  return new H6Tag().with(dc); }</span>
+<span class="nc" id="L607">    public static H6Tag h6 (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new H6Tag(), shortAttr); }</span>
+<span class="nc" id="L608">    public static H6Tag h6 (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new H6Tag().withText(text), shortAttr); }</span>
+<span class="nc" id="L609">    public static H6Tag h6 (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new H6Tag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L611">    public static HeaderTag header ()                                               {  return new HeaderTag(); }</span>
+<span class="nc" id="L612">    public static HeaderTag header (String text)                                    {  return new HeaderTag().withText(text); }</span>
+<span class="fc" id="L613">    public static HeaderTag header (DomContent... dc)                               {  return new HeaderTag().with(dc); }</span>
+<span class="nc" id="L614">    public static HeaderTag header (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new HeaderTag(), shortAttr); }</span>
+<span class="nc" id="L615">    public static HeaderTag header (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new HeaderTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L616">    public static HeaderTag header (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new HeaderTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L618">    public static ITag i ()                                                         {  return new ITag(); }</span>
+<span class="fc" id="L619">    public static ITag i (String text)                                              {  return new ITag().withText(text); }</span>
+<span class="nc" id="L620">    public static ITag i (DomContent... dc)                                         {  return new ITag().with(dc); }</span>
+<span class="nc" id="L621">    public static ITag i (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new ITag(), shortAttr); }</span>
+<span class="nc" id="L622">    public static ITag i (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new ITag().withText(text), shortAttr); }</span>
+<span class="nc" id="L623">    public static ITag i (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new ITag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L625">    public static IframeTag iframe ()                                               {  return new IframeTag(); }</span>
+<span class="nc" id="L626">    public static IframeTag iframe (String text)                                    {  return new IframeTag().withText(text); }</span>
+<span class="nc" id="L627">    public static IframeTag iframe (DomContent... dc)                               {  return new IframeTag().with(dc); }</span>
+<span class="nc" id="L628">    public static IframeTag iframe (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new IframeTag(), shortAttr); }</span>
+<span class="nc" id="L629">    public static IframeTag iframe (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new IframeTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L630">    public static IframeTag iframe (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new IframeTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L632">    public static InsTag ins ()                                                     {  return new InsTag(); }</span>
+<span class="fc" id="L633">    public static InsTag ins (String text)                                          {  return new InsTag().withText(text); }</span>
+<span class="nc" id="L634">    public static InsTag ins (DomContent... dc)                                     {  return new InsTag().with(dc); }</span>
+<span class="nc" id="L635">    public static InsTag ins (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new InsTag(), shortAttr); }</span>
+<span class="nc" id="L636">    public static InsTag ins (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new InsTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L637">    public static InsTag ins (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new InsTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L639">    public static KbdTag kbd ()                                                     {  return new KbdTag(); }</span>
+<span class="nc" id="L640">    public static KbdTag kbd (String text)                                          {  return new KbdTag().withText(text); }</span>
+<span class="nc" id="L641">    public static KbdTag kbd (DomContent... dc)                                     {  return new KbdTag().with(dc); }</span>
+<span class="nc" id="L642">    public static KbdTag kbd (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new KbdTag(), shortAttr); }</span>
+<span class="nc" id="L643">    public static KbdTag kbd (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new KbdTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L644">    public static KbdTag kbd (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new KbdTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L646">    public static LabelTag label ()                                                 {  return new LabelTag(); }</span>
+<span class="fc" id="L647">    public static LabelTag label (String text)                                      {  return new LabelTag().withText(text); }</span>
+<span class="nc" id="L648">    public static LabelTag label (DomContent... dc)                                 {  return new LabelTag().with(dc); }</span>
+<span class="nc" id="L649">    public static LabelTag label (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new LabelTag(), shortAttr); }</span>
+<span class="nc" id="L650">    public static LabelTag label (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new LabelTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L651">    public static LabelTag label (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new LabelTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L653">    public static LegendTag legend ()                                               {  return new LegendTag(); }</span>
+<span class="fc" id="L654">    public static LegendTag legend (String text)                                    {  return new LegendTag().withText(text); }</span>
+<span class="nc" id="L655">    public static LegendTag legend (DomContent... dc)                               {  return new LegendTag().with(dc); }</span>
+<span class="nc" id="L656">    public static LegendTag legend (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new LegendTag(), shortAttr); }</span>
+<span class="nc" id="L657">    public static LegendTag legend (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new LegendTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L658">    public static LegendTag legend (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new LegendTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L660">    public static LiTag li ()                                                       {  return new LiTag(); }</span>
+<span class="fc" id="L661">    public static LiTag li (String text)                                            {  return new LiTag().withText(text); }</span>
+<span class="fc" id="L662">    public static LiTag li (DomContent... dc)                                       {  return new LiTag().with(dc); }</span>
+<span class="nc" id="L663">    public static LiTag li (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new LiTag(), shortAttr); }</span>
+<span class="nc" id="L664">    public static LiTag li (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new LiTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L665">    public static LiTag li (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new LiTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L667">    public static MainTag main ()                                                   {  return new MainTag(); }</span>
+<span class="nc" id="L668">    public static MainTag main (String text)                                        {  return new MainTag().withText(text); }</span>
+<span class="fc" id="L669">    public static MainTag main (DomContent... dc)                                   {  return new MainTag().with(dc); }</span>
+<span class="nc" id="L670">    public static MainTag main (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new MainTag(), shortAttr); }</span>
+<span class="nc" id="L671">    public static MainTag main (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new MainTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L672">    public static MainTag main (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new MainTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L674">    public static MapTag map ()                                                     {  return new MapTag(); }</span>
+<span class="nc" id="L675">    public static MapTag map (String text)                                          {  return new MapTag().withText(text); }</span>
+<span class="nc" id="L676">    public static MapTag map (DomContent... dc)                                     {  return new MapTag().with(dc); }</span>
+<span class="nc" id="L677">    public static MapTag map (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new MapTag(), shortAttr); }</span>
+<span class="nc" id="L678">    public static MapTag map (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new MapTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L679">    public static MapTag map (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new MapTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L681">    public static MarkTag mark ()                                                   {  return new MarkTag(); }</span>
+<span class="nc" id="L682">    public static MarkTag mark (String text)                                        {  return new MarkTag().withText(text); }</span>
+<span class="nc" id="L683">    public static MarkTag mark (DomContent... dc)                                   {  return new MarkTag().with(dc); }</span>
+<span class="nc" id="L684">    public static MarkTag mark (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new MarkTag(), shortAttr); }</span>
+<span class="nc" id="L685">    public static MarkTag mark (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new MarkTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L686">    public static MarkTag mark (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new MarkTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L688">    public static MenuTag menu ()                                                   {  return new MenuTag(); }</span>
+<span class="nc" id="L689">    public static MenuTag menu (String text)                                        {  return new MenuTag().withText(text); }</span>
+<span class="nc" id="L690">    public static MenuTag menu (DomContent... dc)                                   {  return new MenuTag().with(dc); }</span>
+<span class="nc" id="L691">    public static MenuTag menu (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new MenuTag(), shortAttr); }</span>
+<span class="nc" id="L692">    public static MenuTag menu (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new MenuTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L693">    public static MenuTag menu (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new MenuTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L695">    public static MenuitemTag menuitem ()                                           {  return new MenuitemTag(); }</span>
+<span class="nc" id="L696">    public static MenuitemTag menuitem (String text)                                {  return new MenuitemTag().withText(text); }</span>
+<span class="nc" id="L697">    public static MenuitemTag menuitem (DomContent... dc)                           {  return new MenuitemTag().with(dc); }</span>
+<span class="nc" id="L698">    public static MenuitemTag menuitem (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new MenuitemTag(), shortAttr); }</span>
+<span class="nc" id="L699">    public static MenuitemTag menuitem (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new MenuitemTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L700">    public static MenuitemTag menuitem (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new MenuitemTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L702">    public static MeterTag meter ()                                                 {  return new MeterTag(); }</span>
+<span class="nc" id="L703">    public static MeterTag meter (String text)                                      {  return new MeterTag().withText(text); }</span>
+<span class="nc" id="L704">    public static MeterTag meter (DomContent... dc)                                 {  return new MeterTag().with(dc); }</span>
+<span class="nc" id="L705">    public static MeterTag meter (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new MeterTag(), shortAttr); }</span>
+<span class="nc" id="L706">    public static MeterTag meter (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new MeterTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L707">    public static MeterTag meter (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new MeterTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L709">    public static NavTag nav ()                                                     {  return new NavTag(); }</span>
+<span class="nc" id="L710">    public static NavTag nav (String text)                                          {  return new NavTag().withText(text); }</span>
+<span class="nc" id="L711">    public static NavTag nav (DomContent... dc)                                     {  return new NavTag().with(dc); }</span>
+<span class="nc" id="L712">    public static NavTag nav (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new NavTag(), shortAttr); }</span>
+<span class="nc" id="L713">    public static NavTag nav (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new NavTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L714">    public static NavTag nav (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new NavTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L716">    public static NoscriptTag noscript ()                                           {  return new NoscriptTag(); }</span>
+<span class="nc" id="L717">    public static NoscriptTag noscript (String text)                                {  return new NoscriptTag().withText(text); }</span>
+<span class="nc" id="L718">    public static NoscriptTag noscript (DomContent... dc)                           {  return new NoscriptTag().with(dc); }</span>
+<span class="nc" id="L719">    public static NoscriptTag noscript (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new NoscriptTag(), shortAttr); }</span>
+<span class="nc" id="L720">    public static NoscriptTag noscript (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new NoscriptTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L721">    public static NoscriptTag noscript (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new NoscriptTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L723">    public static ObjectTag object ()                                               {  return new ObjectTag(); }</span>
+<span class="nc" id="L724">    public static ObjectTag object (String text)                                    {  return new ObjectTag().withText(text); }</span>
+<span class="nc" id="L725">    public static ObjectTag object (DomContent... dc)                               {  return new ObjectTag().with(dc); }</span>
+<span class="nc" id="L726">    public static ObjectTag object (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new ObjectTag(), shortAttr); }</span>
+<span class="nc" id="L727">    public static ObjectTag object (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new ObjectTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L728">    public static ObjectTag object (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new ObjectTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L730">    public static OlTag ol ()                                                       {  return new OlTag(); }</span>
+<span class="nc" id="L731">    public static OlTag ol (String text)                                            {  return new OlTag().withText(text); }</span>
+<span class="nc" id="L732">    public static OlTag ol (DomContent... dc)                                       {  return new OlTag().with(dc); }</span>
+<span class="nc" id="L733">    public static OlTag ol (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new OlTag(), shortAttr); }</span>
+<span class="nc" id="L734">    public static OlTag ol (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new OlTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L735">    public static OlTag ol (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new OlTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L737">    public static OptgroupTag optgroup ()                                           {  return new OptgroupTag(); }</span>
+<span class="nc" id="L738">    public static OptgroupTag optgroup (String text)                                {  return new OptgroupTag().withText(text); }</span>
+<span class="nc" id="L739">    public static OptgroupTag optgroup (DomContent... dc)                           {  return new OptgroupTag().with(dc); }</span>
+<span class="nc" id="L740">    public static OptgroupTag optgroup (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new OptgroupTag(), shortAttr); }</span>
+<span class="nc" id="L741">    public static OptgroupTag optgroup (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new OptgroupTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L742">    public static OptgroupTag optgroup (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new OptgroupTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L744">    public static OptionTag option ()                                               {  return new OptionTag(); }</span>
+<span class="fc" id="L745">    public static OptionTag option (String text)                                    {  return new OptionTag().withText(text); }</span>
+<span class="nc" id="L746">    public static OptionTag option (DomContent... dc)                               {  return new OptionTag().with(dc); }</span>
+<span class="nc" id="L747">    public static OptionTag option (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new OptionTag(), shortAttr); }</span>
+<span class="nc" id="L748">    public static OptionTag option (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new OptionTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L749">    public static OptionTag option (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new OptionTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L751">    public static OutputTag output ()                                               {  return new OutputTag(); }</span>
+<span class="nc" id="L752">    public static OutputTag output (String text)                                    {  return new OutputTag().withText(text); }</span>
+<span class="nc" id="L753">    public static OutputTag output (DomContent... dc)                               {  return new OutputTag().with(dc); }</span>
+<span class="nc" id="L754">    public static OutputTag output (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new OutputTag(), shortAttr); }</span>
+<span class="nc" id="L755">    public static OutputTag output (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new OutputTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L756">    public static OutputTag output (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new OutputTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L758">    public static PTag p ()                                                         {  return new PTag(); }</span>
+<span class="fc" id="L759">    public static PTag p (String text)                                              {  return new PTag().withText(text); }</span>
+<span class="fc" id="L760">    public static PTag p (DomContent... dc)                                         {  return new PTag().with(dc); }</span>
+<span class="nc" id="L761">    public static PTag p (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new PTag(), shortAttr); }</span>
+<span class="nc" id="L762">    public static PTag p (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new PTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L763">    public static PTag p (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new PTag().with(dc), shortAttr); }</span>
+
+<span class="nc" id="L765">    public static PictureTag picture ()                                             {  return new PictureTag(); }</span>
+<span class="nc" id="L766">    public static PictureTag picture (String text)                                  {  return new PictureTag().withText(text); }</span>
+<span class="nc" id="L767">    public static PictureTag picture (DomContent... dc)                             {  return new PictureTag().with(dc); }</span>
+<span class="nc" id="L768">    public static PictureTag picture (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new PictureTag(), shortAttr); }</span>
+<span class="nc" id="L769">    public static PictureTag picture (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new PictureTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L770">    public static PictureTag picture (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new PictureTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L772">    public static PreTag pre ()                                                     {  return new PreTag(); }</span>
+<span class="fc" id="L773">    public static PreTag pre (String text)                                          {  return new PreTag().withText(text); }</span>
+<span class="fc" id="L774">    public static PreTag pre (DomContent... dc)                                     {  return new PreTag().with(dc); }</span>
+<span class="nc" id="L775">    public static PreTag pre (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new PreTag(), shortAttr); }</span>
+<span class="nc" id="L776">    public static PreTag pre (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new PreTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L777">    public static PreTag pre (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new PreTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L779">    public static ProgressTag progress ()                                           {  return new ProgressTag(); }</span>
+<span class="nc" id="L780">    public static ProgressTag progress (String text)                                {  return new ProgressTag().withText(text); }</span>
+<span class="nc" id="L781">    public static ProgressTag progress (DomContent... dc)                           {  return new ProgressTag().with(dc); }</span>
+<span class="nc" id="L782">    public static ProgressTag progress (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new ProgressTag(), shortAttr); }</span>
+<span class="nc" id="L783">    public static ProgressTag progress (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new ProgressTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L784">    public static ProgressTag progress (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new ProgressTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L786">    public static QTag q ()                                                         {  return new QTag(); }</span>
+<span class="fc" id="L787">    public static QTag q (String text)                                              {  return new QTag().withText(text); }</span>
+<span class="nc" id="L788">    public static QTag q (DomContent... dc)                                         {  return new QTag().with(dc); }</span>
+<span class="nc" id="L789">    public static QTag q (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new QTag(), shortAttr); }</span>
+<span class="nc" id="L790">    public static QTag q (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new QTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L791">    public static QTag q (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new QTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L793">    public static RpTag rp ()                                                       {  return new RpTag(); }</span>
+<span class="nc" id="L794">    public static RpTag rp (String text)                                            {  return new RpTag().withText(text); }</span>
+<span class="nc" id="L795">    public static RpTag rp (DomContent... dc)                                       {  return new RpTag().with(dc); }</span>
+<span class="nc" id="L796">    public static RpTag rp (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new RpTag(), shortAttr); }</span>
+<span class="nc" id="L797">    public static RpTag rp (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new RpTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L798">    public static RpTag rp (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new RpTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L800">    public static RtTag rt ()                                                       {  return new RtTag(); }</span>
+<span class="nc" id="L801">    public static RtTag rt (String text)                                            {  return new RtTag().withText(text); }</span>
+<span class="nc" id="L802">    public static RtTag rt (DomContent... dc)                                       {  return new RtTag().with(dc); }</span>
+<span class="nc" id="L803">    public static RtTag rt (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new RtTag(), shortAttr); }</span>
+<span class="nc" id="L804">    public static RtTag rt (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new RtTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L805">    public static RtTag rt (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new RtTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L807">    public static RubyTag ruby ()                                                   {  return new RubyTag(); }</span>
+<span class="nc" id="L808">    public static RubyTag ruby (String text)                                        {  return new RubyTag().withText(text); }</span>
+<span class="nc" id="L809">    public static RubyTag ruby (DomContent... dc)                                   {  return new RubyTag().with(dc); }</span>
+<span class="nc" id="L810">    public static RubyTag ruby (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new RubyTag(), shortAttr); }</span>
+<span class="nc" id="L811">    public static RubyTag ruby (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new RubyTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L812">    public static RubyTag ruby (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new RubyTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L814">    public static STag s ()                                                         {  return new STag(); }</span>
+<span class="fc" id="L815">    public static STag s (String text)                                              {  return new STag().withText(text); }</span>
+<span class="nc" id="L816">    public static STag s (DomContent... dc)                                         {  return new STag().with(dc); }</span>
+<span class="nc" id="L817">    public static STag s (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new STag(), shortAttr); }</span>
+<span class="nc" id="L818">    public static STag s (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new STag().withText(text), shortAttr); }</span>
+<span class="nc" id="L819">    public static STag s (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new STag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L821">    public static SampTag samp ()                                                   {  return new SampTag(); }</span>
+<span class="nc" id="L822">    public static SampTag samp (String text)                                        {  return new SampTag().withText(text); }</span>
+<span class="nc" id="L823">    public static SampTag samp (DomContent... dc)                                   {  return new SampTag().with(dc); }</span>
+<span class="nc" id="L824">    public static SampTag samp (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new SampTag(), shortAttr); }</span>
+<span class="nc" id="L825">    public static SampTag samp (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new SampTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L826">    public static SampTag samp (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new SampTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L828">    public static ScriptTag script ()                                               {  return new ScriptTag(); }</span>
+<span class="fc" id="L829">    public static ScriptTag script (String text)                                    {  return new ScriptTag().with(new UnescapedText(text)); }</span>
+<span class="nc" id="L830">    public static ScriptTag script (DomContent... dc)                               {  return new ScriptTag().with(dc); }</span>
+<span class="nc" id="L831">    public static ScriptTag script (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new ScriptTag(), shortAttr); }</span>
+<span class="fc" id="L832">    public static ScriptTag script (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new ScriptTag().with(new UnescapedText(text)), shortAttr); }</span>
+<span class="nc" id="L833">    public static ScriptTag script (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new ScriptTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L835">    public static SectionTag section ()                                             {  return new SectionTag(); }</span>
+<span class="nc" id="L836">    public static SectionTag section (String text)                                  {  return new SectionTag().withText(text); }</span>
+<span class="nc" id="L837">    public static SectionTag section (DomContent... dc)                             {  return new SectionTag().with(dc); }</span>
+<span class="nc" id="L838">    public static SectionTag section (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new SectionTag(), shortAttr); }</span>
+<span class="nc" id="L839">    public static SectionTag section (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new SectionTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L840">    public static SectionTag section (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new SectionTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L842">    public static SelectTag select ()                                               {  return new SelectTag(); }</span>
+<span class="nc" id="L843">    public static SelectTag select (String text)                                    {  return new SelectTag().withText(text); }</span>
+<span class="nc" id="L844">    public static SelectTag select (DomContent... dc)                               {  return new SelectTag().with(dc); }</span>
+<span class="nc" id="L845">    public static SelectTag select (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new SelectTag(), shortAttr); }</span>
+<span class="nc" id="L846">    public static SelectTag select (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new SelectTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L847">    public static SelectTag select (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new SelectTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L849">    public static SmallTag small ()                                                 {  return new SmallTag(); }</span>
+<span class="fc" id="L850">    public static SmallTag small (String text)                                      {  return new SmallTag().withText(text); }</span>
+<span class="nc" id="L851">    public static SmallTag small (DomContent... dc)                                 {  return new SmallTag().with(dc); }</span>
+<span class="nc" id="L852">    public static SmallTag small (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new SmallTag(), shortAttr); }</span>
+<span class="nc" id="L853">    public static SmallTag small (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new SmallTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L854">    public static SmallTag small (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new SmallTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L856">    public static SpanTag span ()                                                   {  return new SpanTag(); }</span>
+<span class="fc" id="L857">    public static SpanTag span (String text)                                        {  return new SpanTag().withText(text); }</span>
+<span class="nc" id="L858">    public static SpanTag span (DomContent... dc)                                   {  return new SpanTag().with(dc); }</span>
+<span class="nc" id="L859">    public static SpanTag span (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new SpanTag(), shortAttr); }</span>
+<span class="nc" id="L860">    public static SpanTag span (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new SpanTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L861">    public static SpanTag span (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new SpanTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L863">    public static StrongTag strong ()                                               {  return new StrongTag(); }</span>
+<span class="fc" id="L864">    public static StrongTag strong (String text)                                    {  return new StrongTag().withText(text); }</span>
+<span class="nc" id="L865">    public static StrongTag strong (DomContent... dc)                               {  return new StrongTag().with(dc); }</span>
+<span class="nc" id="L866">    public static StrongTag strong (Attr.ShortForm shortAttr)                       {  return Attr.addTo( new StrongTag(), shortAttr); }</span>
+<span class="nc" id="L867">    public static StrongTag strong (Attr.ShortForm shortAttr, String text)          {  return Attr.addTo( new StrongTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L868">    public static StrongTag strong (Attr.ShortForm shortAttr, DomContent... dc)     {  return Attr.addTo( new StrongTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L870">    public static StyleTag style ()                                                 {  return new StyleTag(); }</span>
+<span class="fc" id="L871">    public static StyleTag style (String text)                                      {  return new StyleTag().with(new UnescapedText(text)); }</span>
+<span class="nc" id="L872">    public static StyleTag style (DomContent... dc)                                 {  return new StyleTag().with(dc); }</span>
+<span class="nc" id="L873">    public static StyleTag style (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new StyleTag(), shortAttr); }</span>
+<span class="fc" id="L874">    public static StyleTag style (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new StyleTag().with(new UnescapedText(text)), shortAttr); }</span>
+<span class="nc" id="L875">    public static StyleTag style (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new StyleTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L877">    public static SubTag sub ()                                                     {  return new SubTag(); }</span>
+<span class="fc" id="L878">    public static SubTag sub (String text)                                          {  return new SubTag().withText(text); }</span>
+<span class="nc" id="L879">    public static SubTag sub (DomContent... dc)                                     {  return new SubTag().with(dc); }</span>
+<span class="nc" id="L880">    public static SubTag sub (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new SubTag(), shortAttr); }</span>
+<span class="nc" id="L881">    public static SubTag sub (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new SubTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L882">    public static SubTag sub (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new SubTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L884">    public static SummaryTag summary ()                                             {  return new SummaryTag(); }</span>
+<span class="fc" id="L885">    public static SummaryTag summary (String text)                                  {  return new SummaryTag().withText(text); }</span>
+<span class="nc" id="L886">    public static SummaryTag summary (DomContent... dc)                             {  return new SummaryTag().with(dc); }</span>
+<span class="nc" id="L887">    public static SummaryTag summary (Attr.ShortForm shortAttr)                     {  return Attr.addTo( new SummaryTag(), shortAttr); }</span>
+<span class="nc" id="L888">    public static SummaryTag summary (Attr.ShortForm shortAttr, String text)        {  return Attr.addTo( new SummaryTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L889">    public static SummaryTag summary (Attr.ShortForm shortAttr, DomContent... dc)   {  return Attr.addTo( new SummaryTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L891">    public static SupTag sup ()                                                     {  return new SupTag(); }</span>
+<span class="fc" id="L892">    public static SupTag sup (String text)                                          {  return new SupTag().withText(text); }</span>
+<span class="nc" id="L893">    public static SupTag sup (DomContent... dc)                                     {  return new SupTag().with(dc); }</span>
+<span class="nc" id="L894">    public static SupTag sup (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new SupTag(), shortAttr); }</span>
+<span class="nc" id="L895">    public static SupTag sup (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new SupTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L896">    public static SupTag sup (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new SupTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L898">    public static TableTag table ()                                                 {  return new TableTag(); }</span>
+<span class="nc" id="L899">    public static TableTag table (String text)                                      {  return new TableTag().withText(text); }</span>
+<span class="fc" id="L900">    public static TableTag table (DomContent... dc)                                 {  return new TableTag().with(dc); }</span>
+<span class="nc" id="L901">    public static TableTag table (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TableTag(), shortAttr); }</span>
+<span class="nc" id="L902">    public static TableTag table (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new TableTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L903">    public static TableTag table (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new TableTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L905">    public static TbodyTag tbody ()                                                 {  return new TbodyTag(); }</span>
+<span class="nc" id="L906">    public static TbodyTag tbody (String text)                                      {  return new TbodyTag().withText(text); }</span>
+<span class="nc" id="L907">    public static TbodyTag tbody (DomContent... dc)                                 {  return new TbodyTag().with(dc); }</span>
+<span class="nc" id="L908">    public static TbodyTag tbody (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TbodyTag(), shortAttr); }</span>
+<span class="nc" id="L909">    public static TbodyTag tbody (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new TbodyTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L910">    public static TbodyTag tbody (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new TbodyTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L912">    public static TdTag td ()                                                       {  return new TdTag(); }</span>
+<span class="fc" id="L913">    public static TdTag td (String text)                                            {  return new TdTag().withText(text); }</span>
+<span class="nc" id="L914">    public static TdTag td (DomContent... dc)                                       {  return new TdTag().with(dc); }</span>
+<span class="nc" id="L915">    public static TdTag td (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new TdTag(), shortAttr); }</span>
+<span class="nc" id="L916">    public static TdTag td (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new TdTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L917">    public static TdTag td (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new TdTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L919">    public static TextareaTag textarea ()                                           {  return new TextareaTag(); }</span>
+<span class="fc" id="L920">    public static TextareaTag textarea (String text)                                {  return new TextareaTag().withText(text); }</span>
+<span class="nc" id="L921">    public static TextareaTag textarea (DomContent... dc)                           {  return new TextareaTag().with(dc); }</span>
+<span class="nc" id="L922">    public static TextareaTag textarea (Attr.ShortForm shortAttr)                   {  return Attr.addTo( new TextareaTag(), shortAttr); }</span>
+<span class="nc" id="L923">    public static TextareaTag textarea (Attr.ShortForm shortAttr, String text)      {  return Attr.addTo( new TextareaTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L924">    public static TextareaTag textarea (Attr.ShortForm shortAttr, DomContent... dc) {  return Attr.addTo( new TextareaTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L926">    public static TfootTag tfoot ()                                                 {  return new TfootTag(); }</span>
+<span class="nc" id="L927">    public static TfootTag tfoot (String text)                                      {  return new TfootTag().withText(text); }</span>
+<span class="nc" id="L928">    public static TfootTag tfoot (DomContent... dc)                                 {  return new TfootTag().with(dc); }</span>
+<span class="nc" id="L929">    public static TfootTag tfoot (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TfootTag(), shortAttr); }</span>
+<span class="nc" id="L930">    public static TfootTag tfoot (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new TfootTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L931">    public static TfootTag tfoot (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new TfootTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L933">    public static ThTag th ()                                                       {  return new ThTag(); }</span>
+<span class="fc" id="L934">    public static ThTag th (String text)                                            {  return new ThTag().withText(text); }</span>
+<span class="nc" id="L935">    public static ThTag th (DomContent... dc)                                       {  return new ThTag().with(dc); }</span>
+<span class="nc" id="L936">    public static ThTag th (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new ThTag(), shortAttr); }</span>
+<span class="nc" id="L937">    public static ThTag th (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new ThTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L938">    public static ThTag th (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new ThTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L940">    public static TheadTag thead ()                                                 {  return new TheadTag(); }</span>
+<span class="nc" id="L941">    public static TheadTag thead (String text)                                      {  return new TheadTag().withText(text); }</span>
+<span class="nc" id="L942">    public static TheadTag thead (DomContent... dc)                                 {  return new TheadTag().with(dc); }</span>
+<span class="nc" id="L943">    public static TheadTag thead (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TheadTag(), shortAttr); }</span>
+<span class="nc" id="L944">    public static TheadTag thead (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new TheadTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L945">    public static TheadTag thead (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new TheadTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L947">    public static TimeTag time ()                                                   {  return new TimeTag(); }</span>
+<span class="nc" id="L948">    public static TimeTag time (String text)                                        {  return new TimeTag().withText(text); }</span>
+<span class="nc" id="L949">    public static TimeTag time (DomContent... dc)                                   {  return new TimeTag().with(dc); }</span>
+<span class="nc" id="L950">    public static TimeTag time (Attr.ShortForm shortAttr)                           {  return Attr.addTo( new TimeTag(), shortAttr); }</span>
+<span class="nc" id="L951">    public static TimeTag time (Attr.ShortForm shortAttr, String text)              {  return Attr.addTo( new TimeTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L952">    public static TimeTag time (Attr.ShortForm shortAttr, DomContent... dc)         {  return Attr.addTo( new TimeTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L954">    public static TitleTag title ()                                                 {  return new TitleTag(); }</span>
+<span class="fc" id="L955">    public static TitleTag title (String text)                                      {  return new TitleTag().withText(text); }</span>
+<span class="fc" id="L956">    public static TitleTag title (DomContent... dc)                                 {  return new TitleTag().with(dc); }</span>
+<span class="nc" id="L957">    public static TitleTag title (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new TitleTag(), shortAttr); }</span>
+<span class="nc" id="L958">    public static TitleTag title (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new TitleTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L959">    public static TitleTag title (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new TitleTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L961">    public static TrTag tr ()                                                       {  return new TrTag(); }</span>
+<span class="nc" id="L962">    public static TrTag tr (String text)                                            {  return new TrTag().withText(text); }</span>
+<span class="fc" id="L963">    public static TrTag tr (DomContent... dc)                                       {  return new TrTag().with(dc); }</span>
+<span class="nc" id="L964">    public static TrTag tr (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new TrTag(), shortAttr); }</span>
+<span class="nc" id="L965">    public static TrTag tr (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new TrTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L966">    public static TrTag tr (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new TrTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L968">    public static UTag u ()                                                         {  return new UTag(); }</span>
+<span class="fc" id="L969">    public static UTag u (String text)                                              {  return new UTag().withText(text); }</span>
+<span class="nc" id="L970">    public static UTag u (DomContent... dc)                                         {  return new UTag().with(dc); }</span>
+<span class="nc" id="L971">    public static UTag u (Attr.ShortForm shortAttr)                                 {  return Attr.addTo( new UTag(), shortAttr); }</span>
+<span class="nc" id="L972">    public static UTag u (Attr.ShortForm shortAttr, String text)                    {  return Attr.addTo( new UTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L973">    public static UTag u (Attr.ShortForm shortAttr, DomContent... dc)               {  return Attr.addTo( new UTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L975">    public static UlTag ul ()                                                       {  return new UlTag(); }</span>
+<span class="nc" id="L976">    public static UlTag ul (String text)                                            {  return new UlTag().withText(text); }</span>
+<span class="fc" id="L977">    public static UlTag ul (DomContent... dc)                                       {  return new UlTag().with(dc); }</span>
+<span class="nc" id="L978">    public static UlTag ul (Attr.ShortForm shortAttr)                               {  return Attr.addTo( new UlTag(), shortAttr); }</span>
+<span class="nc" id="L979">    public static UlTag ul (Attr.ShortForm shortAttr, String text)                  {  return Attr.addTo( new UlTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L980">    public static UlTag ul (Attr.ShortForm shortAttr, DomContent... dc)             {  return Attr.addTo( new UlTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L982">    public static VarTag var ()                                                     {  return new VarTag(); }</span>
+<span class="nc" id="L983">    public static VarTag var (String text)                                          {  return new VarTag().withText(text); }</span>
+<span class="nc" id="L984">    public static VarTag var (DomContent... dc)                                     {  return new VarTag().with(dc); }</span>
+<span class="nc" id="L985">    public static VarTag var (Attr.ShortForm shortAttr)                             {  return Attr.addTo( new VarTag(), shortAttr); }</span>
+<span class="nc" id="L986">    public static VarTag var (Attr.ShortForm shortAttr, String text)                {  return Attr.addTo( new VarTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L987">    public static VarTag var (Attr.ShortForm shortAttr, DomContent... dc)           {  return Attr.addTo( new VarTag().with(dc), shortAttr); }</span>
+
+<span class="fc" id="L989">    public static VideoTag video ()                                                 {  return new VideoTag(); }</span>
+<span class="nc" id="L990">    public static VideoTag video (String text)                                      {  return new VideoTag().withText(text); }</span>
+<span class="nc" id="L991">    public static VideoTag video (DomContent... dc)                                 {  return new VideoTag().with(dc); }</span>
+<span class="nc" id="L992">    public static VideoTag video (Attr.ShortForm shortAttr)                         {  return Attr.addTo( new VideoTag(), shortAttr); }</span>
+<span class="nc" id="L993">    public static VideoTag video (Attr.ShortForm shortAttr, String text)            {  return Attr.addTo( new VideoTag().withText(text), shortAttr); }</span>
+<span class="nc" id="L994">    public static VideoTag video (Attr.ShortForm shortAttr, DomContent... dc)       {  return Attr.addTo( new VideoTag().with(dc), shortAttr); }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

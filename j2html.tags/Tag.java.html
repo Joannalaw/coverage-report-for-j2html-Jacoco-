@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Tag.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.tags</a> &gt; <span class="el_source">Tag.java</span></div><h1>Tag.java</h1><pre class="source lang-java linenums">package j2html.tags;
+
+import j2html.attributes.Attr;
+import j2html.attributes.Attribute;
+import java.util.ArrayList;
+import java.util.Iterator;
+
+public abstract class Tag&lt;T extends Tag&lt;T&gt;&gt; extends DomContent implements IInstance&lt;T&gt; {
+    private final String tagName;
+    private final ArrayList&lt;Attribute&gt; attributes;
+
+<span class="fc" id="L12">    protected Tag(String tagName) {</span>
+<span class="fc" id="L13">        this.tagName = tagName;</span>
+<span class="fc" id="L14">        this.attributes = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L15">    }</span>
+
+    public String getTagName() {
+<span class="fc" id="L18">        return this.tagName;</span>
+    }
+
+    protected boolean hasTagName() {
+<span class="pc bpc" id="L22" title="1 of 4 branches missed.">        return tagName != null &amp;&amp; !tagName.isEmpty();</span>
+    }
+
+    protected ArrayList&lt;Attribute&gt; getAttributes() {
+<span class="fc" id="L26">        return attributes;</span>
+    }
+
+    /**
+     * Sets an attribute on an element
+     *
+     * @param name  the attribute
+     * @param value the attribute value
+     */
+    boolean setAttribute(String name, String value) {
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (value == null) {</span>
+<span class="fc" id="L37">            return attributes.add(new Attribute(name));</span>
+        }
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        for (Attribute attribute : attributes) {</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">            if (attribute.getName().equals(name)) {</span>
+<span class="fc" id="L41">                attribute.setValue(value); // update with new value</span>
+<span class="fc" id="L42">                return true;</span>
+            }
+<span class="fc" id="L44">        }</span>
+<span class="fc" id="L45">        return attributes.add(new Attribute(name, value));</span>
+    }
+
+    /**
+     * Sets a custom attribute
+     *
+     * @param attribute the attribute name
+     * @param value     the attribute value
+     * @return itself for easy chaining
+     */
+    public T attr(String attribute, Object value) {
+<span class="fc bfc" id="L56" title="All 2 branches covered.">        setAttribute(attribute, value == null ? null : String.valueOf(value));</span>
+<span class="fc" id="L57">        return self();</span>
+    }
+
+    /**
+     * Adds the specified attribute. If the Tag previously contained an attribute with the same name, the old attribute is replaced by the specified attribute.
+     *
+     * @param attribute the attribute
+     * @return itself for easy chaining
+     */
+    public T attr(Attribute attribute) {
+<span class="fc" id="L67">        Iterator&lt;Attribute&gt; iterator = attributes.iterator();</span>
+<span class="fc" id="L68">        String name = attribute.getName();</span>
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">        if (name != null) {</span>
+            // name == null is allowed, but those Attributes are not rendered. So we add them anyway.
+<span class="fc bfc" id="L71" title="All 2 branches covered.">            while (iterator.hasNext()) {</span>
+<span class="fc" id="L72">                Attribute existingAttribute = iterator.next();</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">                if (existingAttribute.getName().equals(name)) {</span>
+<span class="fc" id="L74">                    iterator.remove();</span>
+                }
+<span class="fc" id="L76">            }</span>
+        }
+<span class="fc" id="L78">        attributes.add(attribute);</span>
+<span class="fc" id="L79">        return self();</span>
+    }
+
+    /**
+     * Sets a custom attribute without value
+     *
+     * @param attribute the attribute name
+     * @return itself for easy chaining
+     * @see Tag#attr(String, Object)
+     */
+    public T attr(String attribute) {
+<span class="fc" id="L90">        return attr(attribute, null);</span>
+    }
+
+    /**
+     * Call attr-method based on condition
+     * {@link #attr(String attribute, Object value)}
+     *
+     * @param condition the condition
+     * @param attribute the attribute name
+     * @param value     the attribute value
+     * @return itself for easy chaining
+     */
+    public T condAttr(boolean condition, String attribute, String value) {
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        return (condition ? attr(attribute, value) : self());</span>
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (!(obj instanceof Tag)) {</span>
+<span class="nc" id="L109">            return false;</span>
+        }
+<span class="fc" id="L111">        return ((Tag&lt;?&gt;) obj).render().equals(this.render());</span>
+    }
+
+    /**
+     * Convenience methods that call attr with predefined attributes
+     *
+     * @return itself for easy chaining
+     */
+    public T withClasses(String... classes) {
+<span class="fc" id="L120">        StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        for (String s : classes) {</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">            sb.append(s != null ? s : &quot;&quot;).append(&quot; &quot;);</span>
+        }
+<span class="fc" id="L124">        return attr(Attr.CLASS, sb.toString().trim());</span>
+    }
+
+    /*
+    Tag.java contains all Global Attributes, Attributes which are
+    valid on all HTML Tags. Reference:
+    https://www.w3schools.com/tags/ref_standardattributes.asp
+    Attributes:
+
+    accesskey
+    class
+    contenteditable
+    data-*
+    dir
+    draggable
+    hidden
+    id
+    lang
+    spellcheck
+    style
+    tabindex
+    title
+    translate
+     */
+
+<span class="nc" id="L149">    public T withAccesskey(String accesskey){ return attr(Attr.ACCESSKEY, accesskey); }</span>
+
+<span class="fc" id="L151">    public T withClass(String className) { return attr(Attr.CLASS, className); }</span>
+
+<span class="nc" id="L153">    public T isContenteditable(){ return attr(Attr.CONTENTEDITABLE, &quot;true&quot;); }</span>
+
+<span class="fc" id="L155">    public T withData(String dataAttr, String value) { return attr(Attr.DATA + &quot;-&quot; + dataAttr, value); }</span>
+
+<span class="nc" id="L157">    public T withDir(String dir) { return attr(Attr.DIR, dir); }</span>
+
+<span class="nc" id="L159">    public T isDraggable(){ return attr(Attr.DRAGGABLE, &quot;true&quot;); }</span>
+
+<span class="fc" id="L161">    public T isHidden() { return attr(Attr.HIDDEN, null); }</span>
+
+<span class="fc" id="L163">    public T withId(String id) { return attr(Attr.ID, id); }</span>
+
+<span class="nc" id="L165">    public T withLang(String lang) { return attr(Attr.LANG, lang); }</span>
+
+<span class="nc" id="L167">    public T isSpellcheck(){ return attr(Attr.SPELLCHECK, &quot;true&quot;); }</span>
+
+<span class="fc" id="L169">    public T withStyle(String style) { return attr(Attr.STYLE, style); }</span>
+
+<span class="nc" id="L171">    public T withTabindex(int index){ return attr(Attr.TABINDEX, index); }</span>
+
+<span class="fc" id="L173">    public T withTitle(String title) { return attr(Attr.TITLE, title); }</span>
+
+<span class="nc" id="L175">    public T isTranslate(){ return attr(Attr.TRANSLATE, &quot;yes&quot;); }</span>
+
+    // ----- start of withCond$ATTR variants -----
+<span class="nc" id="L178">    public T withCondAccessKey(boolean condition, String accesskey){ return condAttr(condition, Attr.ACCESSKEY, accesskey); }</span>
+
+<span class="nc" id="L180">    public T withCondClass(boolean condition, String className) { return condAttr(condition, Attr.CLASS, className); }</span>
+
+<span class="nc bnc" id="L182" title="All 2 branches missed.">    public T withCondContenteditable(boolean condition){ return attr(Attr.CONTENTEDITABLE, (condition)?&quot;true&quot;:&quot;false&quot;);}</span>
+
+<span class="nc" id="L184">    public T withCondData(boolean condition, String dataAttr, String value) { return condAttr(condition, Attr.DATA + &quot;-&quot; + dataAttr, value); }</span>
+
+<span class="nc" id="L186">    public T withCondDir(boolean condition, String dir) { return condAttr(condition, Attr.DIR, dir); }</span>
+
+<span class="nc bnc" id="L188" title="All 2 branches missed.">    public T withCondDraggable(boolean condition){ return attr(Attr.DRAGGABLE, (condition)?&quot;true&quot;:&quot;false&quot;); }</span>
+
+<span class="nc" id="L190">    public T withCondHidden(boolean condition) { return condAttr(condition, Attr.HIDDEN, null); }</span>
+
+<span class="nc" id="L192">    public T withCondId(boolean condition, String id) { return condAttr(condition, Attr.ID, id); }</span>
+
+<span class="nc" id="L194">    public T withCondLang(boolean condition, String lang) { return condAttr(condition, Attr.LANG, lang); }</span>
+
+<span class="nc bnc" id="L196" title="All 2 branches missed.">    public T withCondSpellcheck(boolean condition){ return attr(Attr.SPELLCHECK, (condition)?&quot;true&quot;:&quot;false&quot;); }</span>
+
+<span class="nc" id="L198">    public T withCondStyle(boolean condition, String style) { return condAttr(condition, Attr.STYLE, style); }</span>
+
+<span class="nc" id="L200">    public T withCondTabindex(boolean condition, int index){ return condAttr(condition, Attr.TABINDEX, index+&quot;&quot;); }</span>
+
+<span class="nc" id="L202">    public T withCondTitle(boolean condition, String title) { return condAttr(condition, Attr.TITLE, title); }</span>
+
+<span class="nc bnc" id="L204" title="All 2 branches missed.">    public T withCondTranslate(boolean condition){ return attr(Attr.TRANSLATE, (condition)?&quot;yes&quot;:&quot;no&quot;); }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JSMin.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.utils</a> &gt; <span class="el_source">JSMin.java</span></div><h1>JSMin.java</h1><pre class="source lang-java linenums">package j2html.utils;
+
+/*
+ * JSMin.java 2006-02-13
+ *
+ * Copyright (c) 2006 John Reilly (www.inconspicuous.org)
+ *
+ * This work is a translation from C to Java of jsmin.c published by
+ * Douglas Crockford.  Permission is hereby granted to use the Java
+ * version under the same conditions as the jsmin.c on which it is
+ * based.
+ *
+ *
+ *
+ *
+ * jsmin.c 2003-04-21
+ *
+ * Copyright (c) 2002 Douglas Crockford (www.crockford.com)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * The Software shall be used for Good, not Evil.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PushbackInputStream;
+
+public class JSMin {
+
+    private static final int EOF = -1;
+    private PushbackInputStream in;
+    private OutputStream out;
+    private int theA;
+    private int theB;
+<span class="fc" id="L55">    private JSMin(InputStream in, OutputStream out) {</span>
+<span class="fc" id="L56">        this.in = new PushbackInputStream(in);</span>
+<span class="fc" id="L57">        this.out = out;</span>
+<span class="fc" id="L58">    }</span>
+
+    /**
+     * Compress a JS-string
+     *
+     * @param code the js-code you want to compress
+     * @return the compressed code
+     */
+    public static String compressJs(String code) {
+<span class="fc" id="L67">        InputStream inStream = new ByteArrayInputStream(code.getBytes());</span>
+<span class="fc" id="L68">        ByteArrayOutputStream outStream = new ByteArrayOutputStream();</span>
+<span class="fc" id="L69">        JSMin jsmin = new JSMin(inStream, outStream);</span>
+        try {
+<span class="fc" id="L71">            jsmin.jsmin();</span>
+<span class="fc" id="L72">            return outStream.toString().trim();</span>
+<span class="nc" id="L73">        } catch (Exception e) {</span>
+<span class="nc" id="L74">            e.printStackTrace();</span>
+<span class="nc" id="L75">            return &quot;&quot;;</span>
+        }
+    }
+
+    /**
+     * isAlphanum -- return true if the character is a letter, digit,
+     * underscore, dollar sign, or non-ASCII character.
+     */
+    private static boolean isAlphanum(int c) {
+<span class="pc bpc" id="L84" title="6 of 20 branches missed.">        return ((c &gt;= 'a' &amp;&amp; c &lt;= 'z') ||</span>
+            (c &gt;= '0' &amp;&amp; c &lt;= '9') ||
+            (c &gt;= 'A' &amp;&amp; c &lt;= 'Z') ||
+            c == '_' ||
+            c == '$' ||
+            c == '\\' ||
+            c &gt; 126);
+    }
+
+    /**
+     * get -- return the next character from stdin. Watch out for lookahead. If
+     * the character is a control character, translate it to a space or
+     * linefeed.
+     */
+    private int get() throws IOException {
+<span class="fc" id="L99">        int c = in.read();</span>
+
+<span class="pc bpc" id="L101" title="1 of 6 branches missed.">        if (c &gt;= ' ' || c == '\n' || c == EOF) {</span>
+<span class="fc" id="L102">            return c;</span>
+        }
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (c == '\r') {</span>
+<span class="nc" id="L106">            return '\n';</span>
+        }
+
+<span class="nc" id="L109">        return ' ';</span>
+    }
+
+
+    /**
+     * Get the next character without getting it.
+     */
+    private int peek() throws IOException {
+<span class="nc" id="L117">        int lookaheadChar = in.read();</span>
+<span class="nc" id="L118">        in.unread(lookaheadChar);</span>
+<span class="nc" id="L119">        return lookaheadChar;</span>
+    }
+
+    /**
+     * next -- get the next character, excluding comments. peek() is used to see
+     * if a '/' is followed by a '/' or '*'.
+     */
+    private int next() throws IOException, UnterminatedCommentException {
+<span class="fc" id="L127">        int c = get();</span>
+<span class="pc bpc" id="L128" title="1 of 2 branches missed.">        if (c == '/') {</span>
+<span class="nc bnc" id="L129" title="All 3 branches missed.">            switch (peek()) {</span>
+                case '/':
+                    for (; ; ) {
+<span class="nc" id="L132">                        c = get();</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">                        if (c &lt;= '\n') {</span>
+<span class="nc" id="L134">                            return c;</span>
+                        }
+                    }
+
+                case '*':
+<span class="nc" id="L139">                    get();</span>
+                    for (; ; ) {
+<span class="nc bnc" id="L141" title="All 3 branches missed.">                        switch (get()) {</span>
+                            case '*':
+<span class="nc bnc" id="L143" title="All 2 branches missed.">                                if (peek() == '/') {</span>
+<span class="nc" id="L144">                                    get();</span>
+<span class="nc" id="L145">                                    return ' ';</span>
+                                }
+                                break;
+                            case EOF:
+<span class="nc" id="L149">                                throw new UnterminatedCommentException();</span>
+                        }
+                    }
+
+                default:
+<span class="nc" id="L154">                    return c;</span>
+            }
+
+        }
+<span class="fc" id="L158">        return c;</span>
+    }
+
+    /**
+     * action -- do something! What you do is determined by the argument: 1
+     * Output A. Copy B to A. Get the next B. 2 Copy B to A. Get the next B.
+     * (Delete A). 3 Get the next B. (Delete B). action treats a string as a
+     * single character. Wow! action recognizes a regular expression if it is
+     * preceded by ( or , or =.
+     */
+
+    private void action(int d) throws IOException, UnterminatedRegExpLiteralException,
+        UnterminatedCommentException, UnterminatedStringLiteralException {
+<span class="pc bpc" id="L171" title="1 of 4 branches missed.">        switch (d) {</span>
+            case 1:
+<span class="fc" id="L173">                out.write(theA);</span>
+            case 2:
+<span class="fc" id="L175">                theA = theB;</span>
+
+<span class="pc bpc" id="L177" title="2 of 4 branches missed.">                if (theA == '\'' || theA == '&quot;') {</span>
+                    for (; ; ) {
+<span class="nc" id="L179">                        out.write(theA);</span>
+<span class="nc" id="L180">                        theA = get();</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">                        if (theA == theB) {</span>
+<span class="nc" id="L182">                            break;</span>
+                        }
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                        if (theA &lt;= '\n') {</span>
+<span class="nc" id="L185">                            throw new UnterminatedStringLiteralException();</span>
+                        }
+<span class="nc bnc" id="L187" title="All 2 branches missed.">                        if (theA == '\\') {</span>
+<span class="nc" id="L188">                            out.write(theA);</span>
+<span class="nc" id="L189">                            theA = get();</span>
+                        }
+                    }
+                }
+
+            case 3:
+<span class="fc" id="L195">                theB = next();</span>
+<span class="pc bpc" id="L196" title="7 of 8 branches missed.">                if (theB == '/' &amp;&amp; (theA == '(' || theA == ',' || theA == '=')) {</span>
+<span class="nc" id="L197">                    out.write(theA);</span>
+<span class="nc" id="L198">                    out.write(theB);</span>
+                    for (; ; ) {
+<span class="nc" id="L200">                        theA = get();</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">                        if (theA == '/') {</span>
+<span class="nc" id="L202">                            break;</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">                        } else if (theA == '\\') {</span>
+<span class="nc" id="L204">                            out.write(theA);</span>
+<span class="nc" id="L205">                            theA = get();</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">                        } else if (theA &lt;= '\n') {</span>
+<span class="nc" id="L207">                            throw new UnterminatedRegExpLiteralException();</span>
+                        }
+<span class="nc" id="L209">                        out.write(theA);</span>
+                    }
+<span class="nc" id="L211">                    theB = next();</span>
+                }
+        }
+<span class="fc" id="L214">    }</span>
+
+    /**
+     * jsmin -- Copy the input to the output, deleting the characters which are
+     * insignificant to JavaScript. Comments will be removed. Tabs will be
+     * replaced with spaces. Carriage returns will be replaced with linefeeds.
+     * Most spaces and linefeeds will be removed.
+     */
+    public void jsmin() throws IOException, UnterminatedRegExpLiteralException, UnterminatedCommentException, UnterminatedStringLiteralException {
+<span class="fc" id="L223">        theA = '\n';</span>
+<span class="fc" id="L224">        action(3);</span>
+<span class="fc bfc" id="L225" title="All 2 branches covered.">        while (theA != EOF) {</span>
+<span class="fc bfc" id="L226" title="All 3 branches covered.">            switch (theA) {</span>
+                case ' ':
+<span class="fc bfc" id="L228" title="All 2 branches covered.">                    if (isAlphanum(theB)) {</span>
+<span class="fc" id="L229">                        action(1);</span>
+                    } else {
+<span class="fc" id="L231">                        action(2);</span>
+                    }
+<span class="fc" id="L233">                    break;</span>
+                case '\n':
+<span class="pc bpc" id="L235" title="2 of 3 branches missed.">                    switch (theB) {</span>
+                        case '{':
+                        case '[':
+                        case '(':
+                        case '+':
+                        case '-':
+<span class="fc" id="L241">                            action(1);</span>
+<span class="fc" id="L242">                            break;</span>
+                        case ' ':
+<span class="nc" id="L244">                            action(3);</span>
+<span class="nc" id="L245">                            break;</span>
+                        default:
+<span class="nc bnc" id="L247" title="All 2 branches missed.">                            if (isAlphanum(theB)) {</span>
+<span class="nc" id="L248">                                action(1);</span>
+                            } else {
+<span class="nc" id="L250">                                action(2);</span>
+                            }
+                    }
+<span class="nc" id="L253">                    break;</span>
+                default:
+<span class="fc bfc" id="L255" title="All 3 branches covered.">                    switch (theB) {</span>
+                        case ' ':
+<span class="fc bfc" id="L257" title="All 2 branches covered.">                            if (isAlphanum(theA)) {</span>
+<span class="fc" id="L258">                                action(1);</span>
+<span class="fc" id="L259">                                break;</span>
+                            }
+<span class="fc" id="L261">                            action(3);</span>
+<span class="fc" id="L262">                            break;</span>
+                        case '\n':
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">                            switch (theA) {</span>
+                                case '}':
+                                case ']':
+                                case ')':
+                                case '+':
+                                case '-':
+                                case '&quot;':
+                                case '\'':
+<span class="nc" id="L272">                                    action(1);</span>
+<span class="nc" id="L273">                                    break;</span>
+                                default:
+<span class="pc bpc" id="L275" title="1 of 2 branches missed.">                                    if (isAlphanum(theA)) {</span>
+<span class="nc" id="L276">                                        action(1);</span>
+                                    } else {
+<span class="fc" id="L278">                                        action(3);</span>
+                                    }
+                            }
+<span class="fc" id="L281">                            break;</span>
+                        default:
+<span class="fc" id="L283">                            action(1);</span>
+<span class="fc" id="L284">                            break;</span>
+                    }
+            }
+        }
+<span class="fc" id="L288">        out.flush();</span>
+<span class="fc" id="L289">    }</span>
+
+<span class="nc" id="L291">    public class UnterminatedCommentException extends Exception {</span>
+    }
+
+<span class="nc" id="L294">    public class UnterminatedStringLiteralException extends Exception {</span>
+    }
+
+<span class="nc" id="L297">    public class UnterminatedRegExpLiteralException extends Exception {</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

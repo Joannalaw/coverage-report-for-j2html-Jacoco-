@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Attr.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.attributes</a> &gt; <span class="el_source">Attr.java</span></div><h1>Attr.java</h1><pre class="source lang-java linenums">package j2html.attributes;
+
+import j2html.tags.Tag;
+
+<span class="fc" id="L5">public abstract class Attr {</span>
+
+    public static final String ACCEPT = &quot;accept&quot;;
+    public static final String ACCEPT_CHARSET = &quot;accept-charset&quot;;
+    public static final String ACCESSKEY = &quot;accesskey&quot;;
+    public static final String ACTION = &quot;action&quot;;
+    public static final String ALIGN = &quot;align&quot;;
+    public static final String ALT = &quot;alt&quot;;
+    public static final String ASYNC = &quot;async&quot;;
+    public static final String AUTOCOMPLETE = &quot;autocomplete&quot;;
+    public static final String AUTOFOCUS = &quot;autofocus&quot;;
+    public static final String AUTOPLAY = &quot;autoplay&quot;;
+    public static final String AUTOSAVE = &quot;autosave&quot;;
+    public static final String BORDER = &quot;border&quot;;
+    public static final String BUFFERED = &quot;buffered&quot;;
+    public static final String CHALLENGE = &quot;challenge&quot;;
+    public static final String CHARSET = &quot;charset&quot;;
+    public static final String CHECKED = &quot;checked&quot;;
+    public static final String CITE = &quot;cite&quot;;
+    public static final String CLASS = &quot;class&quot;;
+    public static final String COLOR = &quot;color&quot;;
+    public static final String COLS = &quot;cols&quot;;
+    public static final String COLSPAN = &quot;colspan&quot;;
+    public static final String CONTENT = &quot;content&quot;;
+    public static final String CONTENTEDITABLE = &quot;contenteditable&quot;;
+    public static final String CONTEXTMENU = &quot;contextmenu&quot;;
+    public static final String CONTROLS = &quot;controls&quot;;
+    public static final String COORDS = &quot;coords&quot;;
+    public static final String DATA = &quot;data&quot;;
+    public static final String DATETIME = &quot;datetime&quot;;
+    public static final String DEFAULT = &quot;default&quot;;
+    public static final String DEFER = &quot;defer&quot;;
+    public static final String DIR = &quot;dir&quot;;
+    public static final String DIRNAME = &quot;dirname&quot;;
+    public static final String DISABLED = &quot;disabled&quot;;
+    public static final String DOWNLOAD = &quot;download&quot;;
+    public static final String DRAGGABLE = &quot;draggable&quot;;
+    public static final String DROPZONE = &quot;dropzone&quot;;
+    public static final String ENCTYPE = &quot;enctype&quot;;
+    public static final String FOR = &quot;for&quot;;
+    public static final String FORM = &quot;form&quot;;
+    public static final String FORMACTION = &quot;formaction&quot;;
+    public static final String HEADERS = &quot;headers&quot;;
+    public static final String HEIGHT = &quot;height&quot;;
+    public static final String HIDDEN = &quot;hidden&quot;;
+    public static final String HIGH = &quot;high&quot;;
+    public static final String HREF = &quot;href&quot;;
+    public static final String HREFLANG = &quot;hreflang&quot;;
+    public static final String HTTP_EQUIV = &quot;http-equiv&quot;;
+    public static final String ICON = &quot;icon&quot;;
+    public static final String ID = &quot;id&quot;;
+    public static final String ISMAP = &quot;ismap&quot;;
+    public static final String ITEMPROP = &quot;itemprop&quot;;
+    public static final String KEYTYPE = &quot;keytype&quot;;
+    public static final String KIND = &quot;kind&quot;;
+    public static final String LABEL = &quot;label&quot;;
+    public static final String LANG = &quot;lang&quot;;
+    public static final String LANGUAGE = &quot;language&quot;;
+    public static final String LIST = &quot;list&quot;;
+    public static final String LOOP = &quot;loop&quot;;
+    public static final String LOW = &quot;low&quot;;
+    public static final String MANIFEST = &quot;manifest&quot;;
+    public static final String MAX = &quot;max&quot;;
+    public static final String MAXLENGTH = &quot;maxlength&quot;;
+    public static final String MEDIA = &quot;media&quot;;
+    public static final String METHOD = &quot;method&quot;;
+    public static final String MIN = &quot;min&quot;;
+    public static final String MULTIPLE = &quot;multiple&quot;;
+    public static final String NAME = &quot;name&quot;;
+    public static final String NOVALIDATE = &quot;novalidate&quot;;
+    public static final String OPEN = &quot;open&quot;;
+    public static final String OPTIMUM = &quot;optimum&quot;;
+    public static final String PATTERN = &quot;pattern&quot;;
+    public static final String PING = &quot;ping&quot;;
+    public static final String PLACEHOLDER = &quot;placeholder&quot;;
+    public static final String POSTER = &quot;poster&quot;;
+    public static final String PRELOAD = &quot;preload&quot;;
+    public static final String PUBDATE = &quot;pubdate&quot;;
+    public static final String RADIOGROUP = &quot;radiogroup&quot;;
+    public static final String READONLY = &quot;readonly&quot;;
+    public static final String REL = &quot;rel&quot;;
+    public static final String REQUIRED = &quot;required&quot;;
+    public static final String REVERSED = &quot;reversed&quot;;
+    public static final String ROLE = &quot;role&quot;;
+    public static final String ROWS = &quot;rows&quot;;
+    public static final String ROWSPAN = &quot;rowspan&quot;;
+    public static final String SANDBOX = &quot;sandbox&quot;;
+    public static final String SCOPE = &quot;scope&quot;;
+    public static final String SCOPED = &quot;scoped&quot;;
+    public static final String SEAMLESS = &quot;seamless&quot;;
+    public static final String SELECTED = &quot;selected&quot;;
+    public static final String SHAPE = &quot;shape&quot;;
+    public static final String SIZE = &quot;size&quot;;
+    public static final String SIZES = &quot;sizes&quot;;
+    public static final String SPAN = &quot;span&quot;;
+    public static final String SPELLCHECK = &quot;spellcheck&quot;;
+    public static final String SRC = &quot;src&quot;;
+    public static final String SRCDOC = &quot;srcdoc&quot;;
+    public static final String SRCLANG = &quot;srclang&quot;;
+    public static final String SRCSET = &quot;srcset&quot;;
+    public static final String START = &quot;start&quot;;
+    public static final String STEP = &quot;step&quot;;
+    public static final String STYLE = &quot;style&quot;;
+    public static final String SUMMARY = &quot;summary&quot;;
+    public static final String TABINDEX = &quot;tabindex&quot;;
+    public static final String TARGET = &quot;target&quot;;
+    public static final String TITLE = &quot;title&quot;;
+    public static final String TYPE = &quot;type&quot;;
+    public static final String USEMAP = &quot;usemap&quot;;
+    public static final String VALUE = &quot;value&quot;;
+    public static final String WIDTH = &quot;width&quot;;
+    public static final String WRAP = &quot;wrap&quot;;
+    public static final String TRANSLATE = &quot;translate&quot;;
+
+    public static ShortForm shortFormFromAttrsString(String attrs) {
+<span class="fc bfc" id="L120" title="All 4 branches covered.">        if (!attrs.contains(&quot;.&quot;) &amp;&amp; !attrs.contains((&quot;#&quot;))) {</span>
+<span class="fc" id="L121">            throw new IllegalArgumentException(&quot;String must contain either id (#) or class (.)&quot;);</span>
+        }
+<span class="fc bfc" id="L123" title="All 2 branches covered.">        if (attrs.split(&quot;#&quot;).length &gt; 2) {</span>
+<span class="fc" id="L124">            throw new IllegalArgumentException(&quot;Only one id (#) allowed&quot;);</span>
+        }
+<span class="fc" id="L126">        String id = &quot;&quot;;</span>
+<span class="fc" id="L127">        StringBuilder classes = new StringBuilder();</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">        for (String attr : attrs.split(&quot;\\.&quot;)) {</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">            if (attr.contains(&quot;#&quot;)) {</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                if (!attr.startsWith(&quot;#&quot;)) {</span>
+<span class="fc" id="L131">                    throw new IllegalArgumentException(&quot;# cannot be in the middle of string&quot;);</span>
+                }
+<span class="fc" id="L133">                id = attr.replace(&quot;#&quot;, &quot;&quot;);</span>
+            } else {
+<span class="fc" id="L135">                classes.append(attr).append(&quot; &quot;);</span>
+            }
+        }
+<span class="fc" id="L138">        return new ShortForm(id.trim(), classes.toString().trim());</span>
+    }
+
+    public static &lt;T extends Tag&lt;T&gt;&gt; T addTo(T tag, Attr attr) {
+<span class="pc bpc" id="L142" title="1 of 2 branches missed.">        if (null != attr)</span>
+<span class="fc" id="L143">            attr.addTo(tag);</span>
+<span class="fc" id="L144">        return tag;</span>
+    }
+
+    public abstract &lt;T extends Tag&lt;T&gt;&gt; T addTo(T tag);
+
+    public static class ShortForm extends Attr {
+        String id;
+        String classes;
+
+<span class="fc" id="L153">        private ShortForm(String id, String classes) {</span>
+<span class="fc" id="L154">            this.id = id;</span>
+<span class="fc" id="L155">            this.classes = classes;</span>
+<span class="fc" id="L156">        }</span>
+
+        boolean hasId() {
+<span class="pc bpc" id="L159" title="1 of 4 branches missed.">            return id != null &amp;&amp; !&quot;&quot;.equals(id);</span>
+        }
+
+        boolean hasClasses() {
+<span class="pc bpc" id="L163" title="1 of 4 branches missed.">            return classes != null &amp;&amp; !&quot;&quot;.equals(classes);</span>
+        }
+
+        @Override
+        public &lt;T extends Tag&lt;T&gt;&gt; T addTo(T tag) {
+<span class="fc bfc" id="L168" title="All 4 branches covered.">            if (hasId() &amp;&amp; hasClasses()) {</span>
+<span class="fc" id="L169">                return tag.withId(id).withClass(classes);</span>
+            }
+<span class="fc bfc" id="L171" title="All 2 branches covered.">            if (hasId()) {</span>
+<span class="fc" id="L172">                return tag.withId(id);</span>
+            }
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">            if (hasClasses()) {</span>
+<span class="fc" id="L175">                return tag.withClass(classes);</span>
+            }
+<span class="nc" id="L177">            return tag;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

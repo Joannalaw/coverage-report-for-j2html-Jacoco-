@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Config.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html</a> &gt; <span class="el_source">Config.java</span></div><h1>Config.java</h1><pre class="source lang-java linenums">package j2html;
+
+import j2html.utils.CSSMin;
+import j2html.utils.EscapeUtil;
+import j2html.utils.Indenter;
+import j2html.utils.JSMin;
+import j2html.utils.Minifier;
+import j2html.utils.TextEscaper;
+
+import java.util.Collections;
+
+public class Config {
+
+    /**
+     * Change this to configure text-escaping
+     * For example, to disable escaping, do &lt;code&gt;{@code Config.textEscaper = text -&gt; text;}&lt;/code&gt;
+     */
+<span class="fc" id="L18">    public static TextEscaper textEscaper = EscapeUtil::escape;</span>
+    /**
+     * Change this to configure css-minification.
+     * The default minifier is https://github.com/barryvan/CSSMin
+     */
+<span class="fc" id="L23">    public static Minifier cssMinifier = CSSMin::compressCss;</span>
+    /**
+     * Change this to configure js-minification.
+     * The default minifier is a simple whitespace/newline stripper
+     */
+<span class="fc" id="L28">    public static Minifier jsMinifier = JSMin::compressJs;</span>
+    /**
+     * Change this to configure enable/disable closing empty tags
+     * The default is to NOT close them
+     */
+<span class="fc" id="L33">    public static boolean closeEmptyTags = false;</span>
+<span class="fc" id="L34">    private static String FOUR_SPACES = &quot;    &quot;;</span>
+    /**
+     * Change this to configure indentation when rendering formatted html
+     * The default is four spaces
+     */
+<span class="fc" id="L39">    public static Indenter indenter = (level, text) -&gt; String.join(&quot;&quot;, Collections.nCopies(level, FOUR_SPACES)) + text;</span>
+
+
+    private TextEscaper _textEscaper;
+    private Minifier _cssMinifier;
+    private Minifier _jsMinifier;
+    private boolean _closeEmptyTags;
+    private Indenter _indenter;
+
+
+    private Config(
+        TextEscaper _textEscaper,
+        Minifier _cssMinifier,
+        Minifier _jsMinifier,
+        boolean _closeEmptyTags,
+        Indenter _indenter
+<span class="fc" id="L55">    ) {</span>
+<span class="fc" id="L56">        this._textEscaper = _textEscaper;</span>
+<span class="fc" id="L57">        this._cssMinifier = _cssMinifier;</span>
+<span class="fc" id="L58">        this._jsMinifier = _jsMinifier;</span>
+<span class="fc" id="L59">        this._closeEmptyTags = _closeEmptyTags;</span>
+<span class="fc" id="L60">        this._indenter = _indenter;</span>
+<span class="fc" id="L61">    }</span>
+
+    /**
+     * A copy constructor.
+     *
+     * @param original The Config to copy fields from.
+     */
+<span class="fc" id="L68">    private Config(Config original) {</span>
+<span class="fc" id="L69">        this._textEscaper = original._textEscaper;</span>
+<span class="fc" id="L70">        this._cssMinifier = original._cssMinifier;</span>
+<span class="fc" id="L71">        this._jsMinifier = original._jsMinifier;</span>
+<span class="fc" id="L72">        this._closeEmptyTags = original._closeEmptyTags;</span>
+<span class="fc" id="L73">        this._indenter = original._indenter;</span>
+<span class="fc" id="L74">    }</span>
+
+    public TextEscaper textEscaper() {
+<span class="fc" id="L77">        return _textEscaper;</span>
+    }
+
+    public Minifier cssMinifier() {
+<span class="nc" id="L81">        return _cssMinifier;</span>
+    }
+
+    public Minifier jsMinifier() {
+<span class="nc" id="L85">        return _jsMinifier;</span>
+    }
+
+    public boolean closeEmptyTags() {
+<span class="fc" id="L89">        return _closeEmptyTags;</span>
+    }
+
+    public Indenter indenter() {
+<span class="fc" id="L93">        return _indenter;</span>
+    }
+
+    public Config withTextEscaper(TextEscaper textEscaper){
+<span class="nc" id="L97">        Config copy = new Config(this);</span>
+<span class="nc" id="L98">        copy._textEscaper = textEscaper;</span>
+<span class="nc" id="L99">        return copy;</span>
+    }
+
+    public Config withCssMinifier(Minifier cssMinifier){
+<span class="nc" id="L103">        Config copy = new Config(this);</span>
+<span class="nc" id="L104">        copy._cssMinifier = cssMinifier;</span>
+<span class="nc" id="L105">        return copy;</span>
+    }
+
+    public Config withJsMinifier(Minifier jsMinifier){
+<span class="nc" id="L109">        Config copy = new Config(this);</span>
+<span class="nc" id="L110">        copy._jsMinifier = jsMinifier;</span>
+<span class="nc" id="L111">        return copy;</span>
+    }
+
+    public Config withEmptyTagsClosed(boolean closeEmptyTags){
+<span class="fc" id="L115">        Config copy = new Config(this);</span>
+<span class="fc" id="L116">        copy._closeEmptyTags = closeEmptyTags;</span>
+<span class="fc" id="L117">        return copy;</span>
+    }
+
+    public Config withIndenter(Indenter indenter){
+<span class="nc" id="L121">        Config copy = new Config(this);</span>
+<span class="nc" id="L122">        copy._indenter = indenter;</span>
+<span class="nc" id="L123">        return copy;</span>
+    }
+
+<span class="fc" id="L126">    private static final Config DEFAULTS = new Config(</span>
+        EscapeUtil::escape,
+        CSSMin::compressCss,
+        JSMin::compressJs,
+        false,
+<span class="fc" id="L131">        (level, text) -&gt; String.join(&quot;&quot;, Collections.nCopies(level, FOUR_SPACES)) + text</span>
+    );
+
+    public static final Config defaults() {
+<span class="fc" id="L135">        return DEFAULTS;</span>
+    }
+
+    public static final Config global() {
+<span class="fc" id="L139">        return new Config(</span>
+            textEscaper,
+            cssMinifier,
+            jsMinifier,
+            closeEmptyTags,
+            indenter
+        );
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

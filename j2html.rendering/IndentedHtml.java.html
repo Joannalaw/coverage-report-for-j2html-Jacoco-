@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IndentedHtml.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.rendering</a> &gt; <span class="el_source">IndentedHtml.java</span></div><h1>IndentedHtml.java</h1><pre class="source lang-java linenums">package j2html.rendering;
+
+import j2html.Config;
+import j2html.utils.Indenter;
+import j2html.utils.TextEscaper;
+
+import java.io.IOException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+
+/**
+ * Composes HTML with lines breaks and indentation between tags and text.
+ *
+ * @param &lt;T&gt; The type of the Appendable to which HTML will be appended.
+ */
+public class IndentedHtml&lt;T extends Appendable&gt; implements HtmlBuilder&lt;T&gt; {
+
+    /**
+     * Returns an HtmlBuilder that will generate indented HTML using
+     * Config defaults.
+     *
+     * @param out The Appendable to which HTML will be appended.
+     * @param &lt;T&gt; The type of the Appendable to which HTML will be appended.
+     * @return An HtmlBuilder for indented HTML.
+     */
+    public static final &lt;T extends Appendable&gt; IndentedHtml&lt;T&gt; into(T out) {
+<span class="fc" id="L27">        return new IndentedHtml&lt;&gt;(out, Config.defaults());</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate indented HTML using
+     * the given Config.
+     *
+     * @param out    The Appendable to which HTML will be appended.
+     * @param config The Config which will specify indentation, text escapement, tag closing, etc.
+     * @param &lt;T&gt;    The type of the Appendable to which HTML will be appended.
+     * @return An HtmlBuilder for indented HTML.
+     */
+    public static final &lt;T extends Appendable&gt; IndentedHtml&lt;T&gt; into(T out, Config config) {
+<span class="fc" id="L40">        return new IndentedHtml&lt;&gt;(out, config);</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate indented HTML in memory using
+     * Config defaults.
+     *
+     * @return An HtmlBuilder for indented HTML.
+     */
+    public static final IndentedHtml&lt;StringBuilder&gt; inMemory() {
+<span class="fc" id="L50">        return into(new StringBuilder());</span>
+    }
+
+    /**
+     * Returns an HtmlBuilder that will generate indented HTML in memory using
+     * the given Config.
+     *
+     * @param config The Config which will specify indentation, text escapement, tag closing, etc.
+     * @return An HtmlBuilder for indented HTML.
+     */
+    public static final IndentedHtml&lt;StringBuilder&gt; inMemory(Config config) {
+<span class="fc" id="L61">        return into(new StringBuilder(), config);</span>
+    }
+
+    private final T out;
+    private final Indenter indenter;
+    private final TextEscaper textEscaper;
+    private final TagBuilder enclosingElementAttributes;
+    private final TagBuilder emptyElementAttributes;
+
+    // Dealing with preformatted elements (pre and textarea) requires
+    // that we know what our parent elements are.  To do that we use
+    // a stack; adding items as start tags are created, and removing them
+    // as those tags are closed.  Determining whether or not we are
+    // currently rendering into a preformatted element is as simple as
+    // asking if any tags on the stack match a preformatted element name.
+<span class="fc" id="L76">    private final Deque&lt;String&gt; trace = new ArrayDeque&lt;&gt;();</span>
+
+<span class="fc" id="L78">    private IndentedHtml(T out, Config config) {</span>
+<span class="fc" id="L79">        this.out = out;</span>
+<span class="fc" id="L80">        this.indenter = config.indenter();</span>
+<span class="fc" id="L81">        this.textEscaper = config.textEscaper();</span>
+<span class="fc" id="L82">        this.enclosingElementAttributes = new IndentedTagBuilder(false);</span>
+<span class="fc" id="L83">        this.emptyElementAttributes = new IndentedTagBuilder(config.closeEmptyTags());</span>
+<span class="fc" id="L84">    }</span>
+
+    private boolean isContentSelfFormatting() {
+<span class="fc bfc" id="L87" title="All 4 branches covered.">        return trace.contains(&quot;pre&quot;) || trace.contains(&quot;textarea&quot;);</span>
+    }
+
+    private int lvl() {
+<span class="fc" id="L91">        return trace.size();</span>
+    }
+
+    @Override
+    public TagBuilder appendStartTag(String name) throws IOException {
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L97">            out.append(indenter.indent(lvl(), &quot;&quot;));</span>
+        }
+
+<span class="fc" id="L100">        trace.push(name);</span>
+
+<span class="fc" id="L102">        out.append(&quot;&lt;&quot;).append(name);</span>
+<span class="fc" id="L103">        return enclosingElementAttributes;</span>
+    }
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendEndTag(String name) throws IOException {
+<span class="pc bpc" id="L108" title="1 of 2 branches missed.">        if (!name.equals(trace.peek())) {</span>
+<span class="nc" id="L109">            throw new RuntimeException(&quot;Incorrect element closed: &quot; + name + &quot;.  Expected: &quot; + trace.peek());</span>
+        }
+
+<span class="fc bfc" id="L112" title="All 2 branches covered.">        if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L113">            trace.pop();</span>
+<span class="fc" id="L114">            out.append(indenter.indent(lvl(), &quot;&quot;));</span>
+        } else {
+<span class="fc" id="L116">            trace.pop();</span>
+        }
+
+<span class="fc" id="L119">        out.append(&quot;&lt;/&quot;).append(name).append(&quot;&gt;&quot;);</span>
+
+<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L122">            out.append(&quot;\n&quot;);</span>
+        }
+
+<span class="fc" id="L125">        return this;</span>
+    }
+
+    @Override
+    public TagBuilder appendEmptyTag(String name) throws IOException {
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">        if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L131">            out.append(indenter.indent(lvl(), &quot;&quot;));</span>
+        }
+<span class="fc" id="L133">        out.append(&quot;&lt;&quot;).append(name);</span>
+<span class="fc" id="L134">        return emptyElementAttributes;</span>
+    }
+
+    private void appendLines(String txt) throws IOException {
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L139">            String[] lines = txt.split(&quot;\n&quot;);</span>
+<span class="fc bfc" id="L140" title="All 2 branches covered.">            for (String line : lines) {</span>
+<span class="fc" id="L141">                out.append(indenter.indent(lvl(), line)).append(&quot;\n&quot;);</span>
+            }
+<span class="fc" id="L143">        } else {</span>
+<span class="fc" id="L144">            out.append(txt);</span>
+        }
+<span class="fc" id="L146">    }</span>
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendEscapedText(String txt) throws IOException {
+<span class="fc" id="L150">        appendLines(textEscaper.escape(txt));</span>
+<span class="fc" id="L151">        return this;</span>
+    }
+
+    @Override
+    public HtmlBuilder&lt;T&gt; appendUnescapedText(String txt) throws IOException {
+<span class="fc" id="L156">        appendLines(txt);</span>
+<span class="fc" id="L157">        return this;</span>
+    }
+
+    @Override
+    public T output() {
+<span class="fc" id="L162">        return out;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(CharSequence csq) throws IOException {
+<span class="nc" id="L168">        out.append(csq);</span>
+<span class="nc" id="L169">        return this;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(CharSequence csq, int start, int end) throws IOException {
+<span class="nc" id="L175">        out.append(csq, start, end);</span>
+<span class="nc" id="L176">        return this;</span>
+    }
+
+    @Override
+    @Deprecated
+    public HtmlBuilder&lt;T&gt; append(char c) throws IOException {
+<span class="nc" id="L182">        out.append(c);</span>
+<span class="nc" id="L183">        return this;</span>
+    }
+
+
+    private class IndentedTagBuilder implements TagBuilder {
+
+        private final boolean closeTag;
+
+<span class="fc" id="L191">        private IndentedTagBuilder(boolean closeTag) {</span>
+<span class="fc" id="L192">            this.closeTag = closeTag;</span>
+<span class="fc" id="L193">        }</span>
+
+        @Override
+        public TagBuilder appendAttribute(String name, String value) throws IOException {
+<span class="fc" id="L197">            out.append(&quot; &quot;)</span>
+<span class="fc" id="L198">                .append(name)</span>
+<span class="fc" id="L199">                .append(&quot;=\&quot;&quot;)</span>
+<span class="fc" id="L200">                .append(textEscaper.escape(value))</span>
+<span class="fc" id="L201">                .append(&quot;\&quot;&quot;);</span>
+<span class="fc" id="L202">            return this;</span>
+        }
+
+        @Override
+        public TagBuilder appendBooleanAttribute(String name) throws IOException {
+<span class="nc" id="L207">            out.append(&quot; &quot;).append(name);</span>
+<span class="nc" id="L208">            return this;</span>
+        }
+
+        @Override
+        public HtmlBuilder&lt;T&gt; completeTag() throws IOException {
+<span class="fc bfc" id="L213" title="All 2 branches covered.">            if (closeTag) {</span>
+<span class="fc" id="L214">                out.append(&quot;/&quot;);</span>
+            }
+<span class="fc" id="L216">            out.append(&quot;&gt;&quot;);</span>
+
+<span class="fc bfc" id="L218" title="All 2 branches covered.">            if (!isContentSelfFormatting()) {</span>
+<span class="fc" id="L219">                out.append(&quot;\n&quot;);</span>
+            }
+
+<span class="fc" id="L222">            return IndentedHtml.this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(CharSequence csq) throws IOException {
+<span class="nc" id="L228">            out.append(csq);</span>
+<span class="nc" id="L229">            return this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(CharSequence csq, int start, int end) throws IOException {
+<span class="nc" id="L235">            out.append(csq, start, end);</span>
+<span class="nc" id="L236">            return this;</span>
+        }
+
+        @Override
+        @Deprecated
+        public TagBuilder append(char c) throws IOException {
+<span class="nc" id="L242">            out.append(c);</span>
+<span class="nc" id="L243">            return this;</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>

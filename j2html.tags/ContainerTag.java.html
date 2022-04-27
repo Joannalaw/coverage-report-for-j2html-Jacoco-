@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ContainerTag.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">j2html</a> &gt; <a href="index.source.html" class="el_package">j2html.tags</a> &gt; <span class="el_source">ContainerTag.java</span></div><h1>ContainerTag.java</h1><pre class="source lang-java linenums">package j2html.tags;
+
+import j2html.Config;
+import j2html.attributes.Attribute;
+import j2html.rendering.TagBuilder;
+import j2html.rendering.FlatHtml;
+import j2html.rendering.HtmlBuilder;
+import j2html.rendering.IndentedHtml;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+
+public class ContainerTag&lt;T extends ContainerTag&lt;T&gt;&gt; extends Tag&lt;T&gt; {
+
+    protected List&lt;DomContent&gt; children;
+
+    public ContainerTag(String tagName) {
+<span class="fc" id="L20">        super(tagName);</span>
+<span class="fc" id="L21">        this.children = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L22">    }</span>
+
+
+    /**
+     * Appends a DomContent-object to the end of this element
+     *
+     * @param child DomContent-object to be appended
+     * @return itself for easy chaining
+     */
+    public T with(DomContent child) {
+<span class="pc bpc" id="L32" title="1 of 2 branches missed.">        if (this == child) {</span>
+<span class="nc" id="L33">            throw new RuntimeException(&quot;Cannot append a tag to itself.&quot;);</span>
+        }
+<span class="fc bfc" id="L35" title="All 2 branches covered.">        if (child != null) {</span>
+            // in some cases, like when using iff(), we ignore null children
+<span class="fc" id="L37">            children.add(child);</span>
+        }
+<span class="fc" id="L39">        return self();</span>
+    }
+
+
+    /**
+     * Call with-method based on condition
+     * {@link #with(DomContent child)}
+     *
+     * @param condition the condition to use
+     * @param child     DomContent-object to be appended if condition met
+     * @return itself for easy chaining
+     */
+    public T condWith(boolean condition, DomContent child) {
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        return condition ? this.with(child) : self();</span>
+    }
+
+
+    /**
+     * Appends a list of DomContent-objects to the end of this element
+     *
+     * @param children DomContent-objects to be appended
+     * @return itself for easy chaining
+     */
+    public T with(Iterable&lt;? extends DomContent&gt; children) {
+<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (children != null) {</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">            for (DomContent child : children) {</span>
+<span class="nc" id="L65">                this.with(child);</span>
+<span class="nc" id="L66">            }</span>
+        }
+<span class="nc" id="L68">        return self();</span>
+    }
+
+
+    /**
+     * Call with-method based on condition
+     * {@link #with(java.lang.Iterable)}
+     *
+     * @param condition the condition to use
+     * @param children  DomContent-objects to be appended if condition met
+     * @return itself for easy chaining
+     */
+    public T condWith(boolean condition, Iterable&lt;? extends DomContent&gt; children) {
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        return condition ? this.with(children) : self();</span>
+    }
+
+
+    /**
+     * Appends the DomContent-objects to the end of this element
+     *
+     * @param children DomContent-objects to be appended
+     * @return itself for easy chaining
+     */
+    public T with(DomContent... children) {
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        for (DomContent child : children) {</span>
+<span class="fc" id="L93">            with(child);</span>
+        }
+<span class="fc" id="L95">        return self();</span>
+    }
+
+
+    /**
+     * Appends the DomContent-objects in the stream to the end of this element
+     *
+     * @param children Stream of DomContent-objects to be appended
+     * @return itself for easy chaining
+     */
+    public T with(Stream&lt;DomContent&gt; children) {
+<span class="fc" id="L106">        children.forEach(this::with);</span>
+<span class="fc" id="L107">        return self();</span>
+    }
+
+
+    /**
+     * Call with-method based on condition
+     * {@link #with(DomContent... children)}
+     *
+     * @param condition the condition to use
+     * @param children  DomContent-objects to be appended if condition met
+     * @return itself for easy chaining
+     */
+    public T condWith(boolean condition, DomContent... children) {
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        return condition ? this.with(children) : self();</span>
+    }
+
+
+    /**
+     * Appends a Text-object to this element
+     *
+     * @param text the text to be appended
+     * @return itself for easy chaining
+     */
+    public T withText(String text) {
+<span class="fc" id="L131">        return with(new Text(text));</span>
+    }
+
+    /**
+     * Gets number of child nodes this tag element contains
+     */
+    public int getNumChildren() {
+<span class="nc" id="L138">        return children.size();</span>
+    }
+
+    /**
+     * Render the ContainerTag and its children, adding newlines before each
+     * child and using Config.indenter to indent child based on how deep
+     * in the tree it is
+     *
+     * @return the rendered and formatted string
+     */
+    public String renderFormatted() {
+        try {
+<span class="fc" id="L150">            return render(IndentedHtml.into(new StringBuilder(), Config.global())).toString();</span>
+<span class="nc" id="L151">        }catch (IOException e) {</span>
+<span class="nc" id="L152">            throw new RuntimeException(e.getMessage(), e);</span>
+        }
+    }
+
+    @Override
+    public &lt;A extends Appendable&gt; A render(HtmlBuilder&lt;A&gt; builder, Object model) throws IOException {
+<span class="fc bfc" id="L158" title="All 2 branches covered.">        if (hasTagName()) {</span>
+<span class="fc" id="L159">            TagBuilder tagBuilder = builder.appendStartTag(getTagName());</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">            for(Attribute attribute : getAttributes()){</span>
+<span class="fc" id="L161">                attribute.render(tagBuilder, model);</span>
+<span class="fc" id="L162">            }</span>
+<span class="fc" id="L163">            tagBuilder.completeTag();</span>
+        }
+
+<span class="fc bfc" id="L166" title="All 2 branches covered.">        for(DomContent child : children){</span>
+<span class="fc" id="L167">            child.render(builder, model);</span>
+<span class="fc" id="L168">        }</span>
+
+<span class="fc bfc" id="L170" title="All 2 branches covered.">        if(hasTagName()) {</span>
+<span class="fc" id="L171">            builder.appendEndTag(getTagName());</span>
+        }
+
+<span class="fc" id="L174">        return builder.output();</span>
+    }
+
+    @Override
+    @Deprecated
+    public void renderModel(Appendable writer, Object model) throws IOException {
+<span class="pc bpc" id="L180" title="1 of 2 branches missed.">        HtmlBuilder&lt;?&gt; builder = (writer instanceof HtmlBuilder)</span>
+<span class="nc" id="L181">            ? (HtmlBuilder&lt;?&gt;) writer</span>
+<span class="fc" id="L182">            : FlatHtml.into(writer, Config.global());</span>
+
+<span class="fc" id="L184">        render(builder, model);</span>
+<span class="fc" id="L185">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.8.202204050719</span></div></body></html>
